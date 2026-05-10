@@ -209,6 +209,8 @@ function startGame() {
     li.src = dropSrcs[0];
     livesEl.appendChild(li);
   }
+  gameScore = 0;
+  document.getElementById('scoreNum').textContent = '0';
   document.getElementById('gameOver').style.display = 'none';
   document.getElementById('pauseBtn').style.display = 'flex';
   fadeOutTitle();
