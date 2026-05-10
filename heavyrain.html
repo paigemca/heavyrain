@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-html, body { width: 100%; height: 100%; overflow: hidden; }
+html, body { width: 100%; height: 100%; overflow: hidden; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; touch-action: none; }
 #bgLayer { position: fixed; inset: 0; }
 #bgLayer img { width: 100%; height: 100%; object-fit: cover; object-position: center center; display: block; }
+img { -webkit-touch-callout: none; pointer-events: none; }
 #cloudContainer { position: fixed; top: 2%; left: 50%; transform: translateX(-50%); width: 69%; max-width: 813px; z-index: 2; pointer-events: none; }
 #cloud { width: 100%; height: auto; display: block; }
 #title { position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: row; align-items: center; gap: 2vw; white-space: nowrap; }
@@ -79,6 +80,7 @@ function loop() {
 }
 
 window.addEventListener('resize', updateChar);
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 setTimeout(updateChar, 50);
 loop();
 
