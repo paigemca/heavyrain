@@ -120,6 +120,7 @@ document.addEventListener('keyup', function(e) {
 // Touch / click controls
 var lastTapTime = 0;
 document.addEventListener('pointerdown', function(e) {
+  if (e.target.tagName === 'BUTTON') return;
   if (!gameActive) { startGame(); return; }
   var now = Date.now();
   if (now - lastTapTime < 300) { jump(); lastTapTime = 0; return; }
@@ -155,7 +156,7 @@ function endGame() {
   gamePaused = false;
   document.getElementById('pauseBtn').style.display = 'none';
   document.getElementById('pauseBtn').innerHTML = '&#9646;&#9646;';
-  document.getElementById('finalScore').textContent = 'you caught ' + gameScore + ' drops';
+  document.getElementById('finalScore').textContent = 'you caught ' + gameScore + ' raindrops';
   var go = document.getElementById('gameOver');
   go.style.display = 'flex';
 }
@@ -167,6 +168,7 @@ document.getElementById('playAgain').addEventListener('click', function(e) {
   document.getElementById('lives').style.display = 'none';
   gameActive = false;
   gameScore = 0;
+  document.getElementById('scoreNum').textContent = '0';
   activeDrops.forEach(function(d) { d.el.remove(); });
   activeDrops = [];
   charVelX = 0;
@@ -219,7 +221,7 @@ function scheduleDrop() {
   if (!gameActive) return;
   if (gamePaused) { setTimeout(scheduleDrop, 200); return; }
   var elapsed = (Date.now() - gameStartTime) / 1000; // seconds
-  var base = Math.max(280, 1400 - elapsed * 9);      // 1400ms → 280ms over ~2 min
+  var base = Math.max(250, 1200 - elapsed * 14);     // 1200ms → 250ms over ~68s
   var jitter = base * 0.3;
   setTimeout(function() { spawnDrop(); scheduleDrop(); }, base + Math.random() * jitter);
 }
