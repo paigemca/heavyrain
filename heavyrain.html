@@ -231,7 +231,9 @@ function spawnDrop() {
   var size = 22 + Math.floor(Math.random() * 16);
   var x    = cr.left + cr.width * 0.15 + Math.random() * cr.width * 0.70;
   var y    = cr.bottom - 10;
-  var spd  = 1.8 + Math.random() * 2.0;
+  var sizeFactor = (size - 22) / 16;                      // 0=smallest/fastest, 1=largest/slowest
+  var speedBoost = Math.min(gameScore * 0.03, 2.5);        // softer ramp than before
+  var spd = (3.2 - sizeFactor * 1.8) + speedBoost + Math.random() * 0.5;
   var src  = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
   var el   = document.createElement('img');
   el.src   = src;
