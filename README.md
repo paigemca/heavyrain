@@ -1,6 +1,6 @@
 # heavy rain
 
-A hand-painted browser game. Move a girl through a rainstorm and catch as many raindrops as you can before you run out of lives.
+Catch as many raindrops as you can before you run out of lives.
 
 **[Play here](https://paigemca.github.io/heavyrain/heavyrain.html)**
 
