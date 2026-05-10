@@ -96,8 +96,12 @@ document.addEventListener('keyup', function(e) {
 });
 
 // Touch / click controls
+var lastTapTime = 0;
 document.addEventListener('pointerdown', function(e) {
   if (!gameActive) { startGame(); return; }
+  var now = Date.now();
+  if (now - lastTapTime < 300) { jump(); lastTapTime = 0; return; }
+  lastTapTime = now;
   if (e.clientX < window.innerWidth / 2) { pressedLeft = true;  pressedRight = false; }
   else                                   { pressedRight = true; pressedLeft  = false; }
 });
