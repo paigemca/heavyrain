@@ -173,16 +173,35 @@ function endGame() {
 
 document.getElementById('playAgain').addEventListener('click', function(e) {
   e.stopPropagation();
+  // Clear game over screen
   document.getElementById('gameOver').style.display = 'none';
   document.getElementById('score').style.display = 'none';
   document.getElementById('lives').style.display = 'none';
+  // Reset all state
   gameActive = false;
+  gamePaused = false;
   groundY = 0.84;
   gameScore = 0;
+  charVelX = 0;
+  velY = 0; offsetY = 0; isOnGround = true; jumpsLeft = 2;
   document.getElementById('scoreNum').textContent = '0';
+  // Remove all active collectible drops
   activeDrops.forEach(function(d) { d.el.remove(); });
   activeDrops = [];
-  charVelX = 0;
+  // Reset pause button
+  var pb = document.getElementById('pauseBtn');
+  pb.innerHTML = '&#9646;&#9646;';
+  pb.style.display = 'none';
+  // Restart CSS rain fresh from random positions
+  bgRainEls.forEach(function(el) {
+    var dur = parseFloat(el.style.animationDuration) || 3;
+    el.style.animationPlayState = 'running';
+    el.style.animation = 'none';
+    void el.offsetWidth;
+    el.style.animation = '';
+    el.style.animationDelay = (-Math.random() * dur).toFixed(2) + 's';
+    el.style.animationPlayState = 'running';
+  });
   startGame();
 });
 
