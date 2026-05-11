@@ -92,12 +92,12 @@ function loop() {
     if (charVelX >  0.01) facingRight = true;
   }
   charX = Math.max(5, Math.min(95, charX));
-  if (!isOnGround) {
+  if (!gamePaused && !isOnGround) {
     velY += GRAVITY; offsetY -= velY;
     if (offsetY <= 0) { offsetY = 0; velY = 0; isOnGround = true; jumpsLeft = 2; }
   }
   updateChar();
-  if (gameActive) updateDrops();
+  if (gameActive && !gamePaused) updateDrops();
   updateBgRain();
   requestAnimationFrame(loop);
 }
@@ -343,7 +343,7 @@ resizeBgCanvas();
 window.addEventListener('resize', resizeBgCanvas);
 
 function spawnBgDrop() {
-  if (bgDrops.length > 55) return;
+  if (gamePaused || bgDrops.length > 55) return;
   var size   = 12 + Math.floor(Math.random() * 22);
   var roll   = Math.random();
   var filter = !gameActive && roll < 0.1 ? 'hue-rotate(190deg) saturate(1.5) brightness(1.15)'
@@ -366,7 +366,7 @@ function updateBgRain() {
 
   // Draw splats
   splats = splats.filter(function(s) {
-    s.age++;
+    if (!gamePaused) s.age++;
     var t = s.age / s.maxAge;
     bgCtx.save();
     bgCtx.globalAlpha = s.opacity * (1 - t);
@@ -384,15 +384,15 @@ function updateBgRain() {
 
   // Draw and move drops
   bgDrops = bgDrops.filter(function(d) {
-    d.y += d.spd;
+    if (!gamePaused) d.y += d.spd;
     var xPct = (d.x / bgCanvas.width) * 100;
     var groundPx = getGroundYPct(xPct) * bgCanvas.height;
-    if (d.y + d.size * 0.5 >= groundPx) {
+    if (!gamePaused && d.y + d.size * 0.5 >= groundPx) {
       splats.push({ x:d.x, y:groundPx, size:d.size, opacity:d.opacity * 0.8,
                     filter:d.filter, imgIdx:d.imgIdx, age:0, maxAge:18 });
       return false;
     }
-    if (d.y > bgCanvas.height + 30) return false;
+    if (!gamePaused && d.y > bgCanvas.height + 30) return false;
     var img = dropImages[d.imgIdx];
     if (!img || !img.complete) return true;
     bgCtx.save();
