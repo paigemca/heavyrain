@@ -14,11 +14,11 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #title { position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: row; align-items: center; gap: 2vw; white-space: nowrap; transition: opacity 0.4s ease; }
 #character { position: fixed; left: 0; top: 0; width: 110px; height: auto; transform-origin: bottom center; will-change: transform; z-index: 2; }
 
-#scoreDropImg { filter: hue-rotate(120deg) saturate(1.4) brightness(1.05); }
+#scoreDropImg { filter: hue-rotate(90deg) saturate(0.85) brightness(1.45); }
 #score { position: fixed; bottom: 20px; right: 20px; z-index: 10; font-size: 22px; font-family: Georgia, serif; background: rgba(255,255,255,0.72); padding: 5px 14px; border-radius: 20px; display: none; align-items: center; gap: 6px; }
 #pauseBtn { position: fixed; bottom: 20px; left: 20px; z-index: 10; font-size: 18px; font-family: Georgia, serif; background: rgba(255,255,255,0.72); border: none; padding: 5px 14px; border-radius: 20px; cursor: pointer; display: none; align-items: center; box-shadow: none; }
 #lives { position: fixed; bottom: 20px; left: 70px; z-index: 10; display: none; flex-direction: row; align-items: center; gap: 5px; }
-#lives img { width: 20px; height: auto; opacity: 0.85; filter: hue-rotate(120deg) saturate(1.4) brightness(1.05); }
+#lives img { width: 20px; height: auto; opacity: 0.85; filter: hue-rotate(90deg) saturate(0.85) brightness(1.45); }
 #flash { position: fixed; inset: 0; z-index: 15; background: rgba(180,30,30,0.35); pointer-events: none; opacity: 0; transition: opacity 0.08s; }
 #gameOver { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); }
 #gameOver h1 { font-family: Georgia, serif; color: #fff; font-size: 44px; text-shadow: 0 2px 10px rgba(0,0,0,0.6); margin-bottom: 8px; }
@@ -76,10 +76,10 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 var charEl = document.getElementById('character');
 var charX = 50, charVelX = 0, facingRight = true;
 var pressedLeft = false, pressedRight = false;
-var CHAR_MAX = 0.65, CHAR_ACCEL = 0.07, CHAR_FRIC = 0.80;
+var CHAR_MAX = 0.90, CHAR_ACCEL = 0.11, CHAR_FRIC = 0.75;
 var velY = 0, offsetY = 0, isOnGround = true, jumpsLeft = 2, groundY = 0.84;
 var activeDrops = [], bgRainEls = [];
-var GRAVITY = 0.6, JUMP_VEL = -14;
+var GRAVITY = 0.75, JUMP_VEL = -16;
 
 function getGroundYPct(x) { return groundY - Math.sin((x / 100) * Math.PI) * 0.04; }
 
@@ -277,7 +277,7 @@ function scheduleDrop() {
 
 var COLLECT_TYPES = [
   { filter: 'hue-rotate(190deg) saturate(1.5) brightness(1.15)', type: 'gold' },
-  { filter: 'hue-rotate(120deg) saturate(1.4) brightness(1.05)', type: 'pink' }
+  { filter: 'hue-rotate(90deg) saturate(0.85) brightness(1.45)', type: 'pink' }
 ];
 
 function spawnDrop() {
@@ -317,8 +317,17 @@ function updateDrops() {
     if (d.y + d.size * 0.5 >= groundPx) { d.el.remove(); if (d.type !== 'gold') missedDrop(); return false; }
     var dl = d.x - d.size * 0.5, dr = d.x + d.size * 0.5, db = d.y + d.size;
     if (dr > cl && dl < cr2 && db > ct && d.y < cb) {
-      gameScore++;
-      document.getElementById('scoreNum').textContent = gameScore;
+      if (d.type === 'gold') {
+        if (lives < 3) {
+          lives++;
+          var li = document.createElement('img');
+          li.src = dropSrcs[0];
+          document.getElementById('lives').appendChild(li);
+        }
+      } else {
+        gameScore++;
+        document.getElementById('scoreNum').textContent = gameScore;
+      }
       d.el.style.transition = 'opacity 0.15s';
       d.el.style.opacity = '0';
       setTimeout(function(el) { el.remove(); }.bind(null, d.el), 160);
@@ -392,7 +401,7 @@ function setupCssRain() {
     var colored = i < 10; // first 10 are home-screen colored drops
     var filter = colored ? (i < 5
       ? 'hue-rotate(190deg) saturate(1.5) brightness(1.15)'
-      : 'hue-rotate(120deg) saturate(1.4) brightness(1.05)') : '';
+      : 'hue-rotate(90deg) saturate(0.85) brightness(1.45)') : '';
 
     el.src = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
     el.className = 'bg-rain' + (colored ? ' bg-rain-colored' : '');
