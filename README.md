@@ -8,7 +8,12 @@ A hand-painted browser game. Stand in the rain and catch the coloured drops — 
 
 ## how to play
 
-Blue raindrops fall as atmosphere — ignore them. Catch the **gold and pink drops** before they hit the ground. You have 3 lives. Miss a coloured drop and you lose one. The rain gets heavier and faster the longer you survive.
+Blue raindrops are decoration — ignore them. Catch the **pink** and **gold** drops before they hit the ground.
+
+- **Pink drops** — catch to score a point. Miss one and you lose a life.
+- **Gold drops** — rare. Catch one to restore a life. Missing costs nothing.
+
+You start with 3 lives. The rain gets heavier and faster the longer you survive.
 
 **Desktop**
 - `←` `→` arrow keys to move
@@ -16,6 +21,6 @@ Blue raindrops fall as atmosphere — ignore them. Catch the **gold and pink dro
 - `Enter` or click to start
 
 **Mobile**
-- Tap the left or right side of the screen to move
-- Double tap to jump
+- Tap the **left** or **right** side of the screen to move
+- Tap the **centre** of the screen to jump (double jump supported)
 - Tap anywhere to start
