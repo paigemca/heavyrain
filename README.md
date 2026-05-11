@@ -13,7 +13,7 @@ Blue raindrops are decoration — ignore them. Catch the **pink** and **gold** d
 - **Pink drops** — catch to score a point. Miss one and you lose a life.
 - **Gold drops** — rare. Catch one to restore a life. Missing costs nothing.
 
-You start with 3 lives. The rain gets heavier and faster the longer you survive.
+You start with 3 lives. The rain gets heavier and the sky darkens the longer you survive.
 
 **Desktop**
 - `←` `→` arrow keys to move
