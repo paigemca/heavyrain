@@ -23,7 +23,8 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #gameOver h1 { font-family: Georgia, serif; color: #fff; font-size: 44px; text-shadow: 0 2px 10px rgba(0,0,0,0.6); margin-bottom: 8px; }
 #gameOver p  { font-family: Georgia, serif; color: #fff; font-size: 22px; }
 #playAgain { margin-top: 28px; font-family: Georgia, serif; font-size: 18px; background: rgba(255,255,255,0.82); border: none; padding: 8px 28px; border-radius: 20px; cursor: pointer; }
-#hint { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
+#hint { position: fixed; bottom: 105px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
+#spotify { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.3); transition: opacity 0.5s; }
 </style>
 </head>
 <body>
@@ -50,8 +51,11 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 <button id="pauseBtn">&#9646;&#9646;</button>
 <div id="lives"></div>
 <div id="flash"></div>
-<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><button id="playAgain">play again</button></div>
+<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><button id="playAgain">play again</button></div>
 <div id="score"><img src="" id="scoreDropImg" style="width:22px;height:auto;opacity:0.85;vertical-align:middle;"><span id="scoreNum" style="vertical-align:middle;">0</span></div>
+<div id="spotify">
+  <iframe src="https://open.spotify.com/embed/track/1RbQQWnEsE4RJUsIO7nFau?utm_source=generator&theme=1" width="240" height="80" frameborder="0" allowtransparency="true" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+</div>
 <div id="hint"></div>
 
 
@@ -62,13 +66,13 @@ var charEl = document.getElementById('character');
 var charX = 50, charVelX = 0, facingRight = true;
 var pressedLeft = false, pressedRight = false;
 var CHAR_MAX = 0.65, CHAR_ACCEL = 0.07, CHAR_FRIC = 0.80;
-var velY = 0, offsetY = 0, isOnGround = true;
+var velY = 0, offsetY = 0, isOnGround = true, jumpsLeft = 2, groundY = 0.84;
 var GRAVITY = 0.6, JUMP_VEL = -14;
 
-function getGroundYPct(x) { return 0.94 - Math.sin((x / 100) * Math.PI) * 0.04; }
+function getGroundYPct(x) { return groundY - Math.sin((x / 100) * Math.PI) * 0.04; }
 
 function jump() {
-  if (isOnGround) { velY = JUMP_VEL; isOnGround = false; }
+  if (jumpsLeft > 0) { velY = JUMP_VEL; isOnGround = false; jumpsLeft--; }
 }
 
 function updateChar() {
@@ -91,7 +95,7 @@ function loop() {
   charX = Math.max(5, Math.min(95, charX));
   if (!isOnGround) {
     velY += GRAVITY; offsetY -= velY;
-    if (offsetY <= 0) { offsetY = 0; velY = 0; isOnGround = true; }
+    if (offsetY <= 0) { offsetY = 0; velY = 0; isOnGround = true; jumpsLeft = 2; }
   }
   updateChar();
   if (gameActive) updateDrops();
@@ -100,8 +104,8 @@ function loop() {
 
 window.addEventListener('resize', updateChar);
 document.getElementById('hint').innerHTML = ('ontouchstart' in window)
-  ? 'tap anywhere to start<br><small>tap left &amp; right to move &nbsp;&bull;&nbsp; double tap to jump</small>'
-  : 'click or press Enter to start<br><small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
+  ? 'tap anywhere to start<br><small>tap left &amp; right to move &nbsp;&bull;&nbsp; double tap to jump</small><br><small>log into spotify below for game audio</small>'
+  : 'click or press Enter to start<br><small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small><br><small>log into spotify below for game audio</small>';
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 setTimeout(updateChar, 50);
 loop();
@@ -157,8 +161,12 @@ function endGame() {
   document.getElementById('pauseBtn').style.display = 'none';
   document.getElementById('pauseBtn').innerHTML = '&#9646;&#9646;';
   document.getElementById('finalScore').textContent = 'you caught ' + gameScore + ' raindrops';
-  var go = document.getElementById('gameOver');
-  go.style.display = 'flex';
+  var prev = parseInt(localStorage.getItem('hrHighScore') || '0');
+  var best = Math.max(prev, gameScore);
+  localStorage.setItem('hrHighScore', best);
+  document.getElementById('bestScore').textContent = best > gameScore ? 'best: ' + best + ' raindrops' : (gameScore > 0 ? 'new best!' : '');
+  document.getElementById('gameOver').style.display = 'flex';
+  var sp = document.getElementById('spotify'); sp.style.display = 'block'; sp.style.opacity = '1';
 }
 
 document.getElementById('playAgain').addEventListener('click', function(e) {
@@ -167,6 +175,7 @@ document.getElementById('playAgain').addEventListener('click', function(e) {
   document.getElementById('score').style.display = 'none';
   document.getElementById('lives').style.display = 'none';
   gameActive = false;
+  groundY = 0.84;
   gameScore = 0;
   document.getElementById('scoreNum').textContent = '0';
   activeDrops.forEach(function(d) { d.el.remove(); });
@@ -197,6 +206,7 @@ function startGame() {
   if (gameActive) return;
   gameActive = true;
   gameStartTime = Date.now();
+  groundY = 0.94;
   document.getElementById('scoreDropImg').src = dropSrcs[0];
   document.getElementById('score').style.display = 'block';
   document.getElementById('hint').style.display  = 'none';
@@ -213,6 +223,10 @@ function startGame() {
   document.getElementById('scoreNum').textContent = '0';
   document.getElementById('gameOver').style.display = 'none';
   document.getElementById('pauseBtn').style.display = 'flex';
+  ambientActive = false;
+  var sp = document.getElementById('spotify');
+  sp.style.opacity = '0';
+  setTimeout(function() { sp.style.display = 'none'; }, 500);
   fadeOutTitle();
   animateCloudToTop();
   spawnDrop();
@@ -272,6 +286,99 @@ function updateDrops() {
     return true;
   });
 }
+// Ambient drops on start screen
+var ambientActive = true;
+
+function spawnAmbientDrop() {
+  if (!ambientActive) return;
+  var cr  = document.getElementById('cloud').getBoundingClientRect();
+  var size = 18 + Math.floor(Math.random() * 18);
+  var x   = cr.left + cr.width * 0.1 + Math.random() * cr.width * 0.8;
+  var y   = cr.bottom - 5;
+  var spd = 0.6 + Math.random() * 0.8;
+  var src = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
+  var el  = document.createElement('img');
+  el.src  = src;
+  el.style.cssText = 'position:fixed;width:' + size + 'px;height:auto;' +
+    'left:' + (x - size/2) + 'px;top:' + y + 'px;' +
+    'pointer-events:none;z-index:0;opacity:0.45;transition:opacity 0.4s;';
+  document.body.appendChild(el);
+
+  // Fade in
+  requestAnimationFrame(function() { el.style.opacity = '0.55'; });
+
+  (function fall() {
+    if (!ambientActive) { el.remove(); return; }
+    y += spd;
+    el.style.top = y + 'px';
+    if (y > window.innerHeight + 20) {
+      el.remove();
+      // Respawn after a random pause
+      setTimeout(spawnAmbientDrop, 600 + Math.random() * 1400);
+    } else {
+      requestAnimationFrame(fall);
+    }
+  })();
+}
+
+// Seed a few drops at staggered intervals so the screen isn't empty at first
+[0, 900, 1800, 2700].forEach(function(delay) {
+  setTimeout(spawnAmbientDrop, delay);
+});
+
+// Ambient rain audio (Web Audio API)
+var audioCtx = null, rainGain = null, rainSource = null;
+
+function startRainSound() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // White noise buffer (2s, looped)
+    var bufLen = audioCtx.sampleRate * 2;
+    var buf    = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+    var data   = buf.getChannelData(0);
+    for (var i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+
+    rainSource = audioCtx.createBufferSource();
+    rainSource.buffer = buf;
+    rainSource.loop   = true;
+
+    // Two filters layered: high-pass removes rumble, low-pass softens hiss
+    var hp = audioCtx.createBiquadFilter();
+    hp.type = 'highpass';  hp.frequency.value = 600;
+
+    var lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass';   lp.frequency.value = 4000;
+
+    rainGain = audioCtx.createGain();
+    rainGain.gain.value = 0;
+
+    rainSource.connect(hp);
+    hp.connect(lp);
+    lp.connect(rainGain);
+    rainGain.connect(audioCtx.destination);
+
+    rainSource.start();
+    rainGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 1.2); // gentle fade-in
+  } catch(e) {}
+}
+
+function updateRainIntensity() {
+  if (!rainGain || !audioCtx || !gameActive) return;
+  var elapsed   = (Date.now() - gameStartTime) / 1000;
+  var intensity = Math.min(0.12 + (elapsed / 120) * 0.33, 0.45);
+  rainGain.gain.setTargetAtTime(intensity, audioCtx.currentTime, 2.0);
+}
+
+function stopRainSound() {
+  if (!rainGain || !audioCtx) return;
+  rainGain.gain.setTargetAtTime(0, audioCtx.currentTime, 1.0);
+  setTimeout(function() {
+    try { rainSource.stop(); audioCtx.close(); } catch(e) {}
+    audioCtx = null; rainGain = null; rainSource = null;
+  }, 2500);
+}
+
 </script>
 </body>
 </html>
