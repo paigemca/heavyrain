@@ -24,7 +24,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #gameOver p  { font-family: Georgia, serif; color: #fff; font-size: 22px; }
 #playAgain { margin-top: 28px; font-family: Georgia, serif; font-size: 18px; background: rgba(255,255,255,0.82); border: none; padding: 8px 28px; border-radius: 20px; cursor: pointer; }
 #hint { position: fixed; bottom: 105px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
-#spotify { position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); z-index: 10; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.3); transition: opacity 0.5s; }
+#spotify { position: fixed; top: 10px; right: 10px; display: none; transition: all 0.6s ease; z-index: 10; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.3); transition: opacity 0.5s; }
 </style>
 </head>
 <body>
@@ -54,7 +54,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 <div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><button id="playAgain">play again</button></div>
 <div id="score"><img src="" id="scoreDropImg" style="width:22px;height:auto;opacity:0.85;vertical-align:middle;"><span id="scoreNum" style="vertical-align:middle;">0</span></div>
 <div id="spotify">
-  <iframe src="https://open.spotify.com/embed/track/1RbQQWnEsE4RJUsIO7nFau?utm_source=generator&theme=1" width="240" height="80" frameborder="0" allowtransparency="true" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+  <iframe id="spotifyFrame" src="https://open.spotify.com/embed/track/1RbQQWnEsE4RJUsIO7nFau?utm_source=generator&theme=1" width="280" height="80" frameborder="0" allowtransparency="true" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
   <div style="text-align:center;padding:4px 0 2px;font-family:Georgia,serif;font-size:11px;"><a href="https://accounts.spotify.com/login" target="_blank" style="color:rgba(255,255,255,0.75);text-decoration:underline;">log in to spotify</a> for the full song</div>
 </div>
 <div id="hint"></div>
@@ -167,7 +167,6 @@ function endGame() {
   localStorage.setItem('hrHighScore', best);
   document.getElementById('bestScore').textContent = best > gameScore ? 'best: ' + best + ' raindrops' : (gameScore > 0 ? 'new best!' : '');
   document.getElementById('gameOver').style.display = 'flex';
-  var sp = document.getElementById('spotify'); sp.style.display = 'block'; sp.style.opacity = '1';
 }
 
 document.getElementById('playAgain').addEventListener('click', function(e) {
@@ -177,6 +176,7 @@ document.getElementById('playAgain').addEventListener('click', function(e) {
   document.getElementById('lives').style.display = 'none';
   gameActive = false;
   groundY = 0.84;
+  document.getElementById('spotify').style.display = 'none';
   gameScore = 0;
   document.getElementById('scoreNum').textContent = '0';
   activeDrops.forEach(function(d) { d.el.remove(); });
@@ -226,8 +226,9 @@ function startGame() {
   document.getElementById('pauseBtn').style.display = 'flex';
   ambientActive = false;
   var sp = document.getElementById('spotify');
-  sp.style.opacity = '0';
-  setTimeout(function() { sp.style.display = 'none'; }, 500);
+  sp.style.display = 'block';
+  var sf = document.getElementById('spotifyFrame');
+  sf.src = 'https://open.spotify.com/embed/track/1RbQQWnEsE4RJUsIO7nFau?utm_source=generator&theme=1&autoplay=1';
   fadeOutTitle();
   animateCloudToTop();
   spawnDrop();
