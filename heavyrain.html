@@ -12,7 +12,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #cloudContainer { position: fixed; top: 2%; left: 50%; transform: translateX(-50%); width: 69%; max-width: 813px; z-index: 2; pointer-events: none; transition: top 0.7s ease, width 0.7s ease; }
 #cloud { width: 100%; height: auto; display: block; }
 #title { position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: row; align-items: center; gap: 2vw; white-space: nowrap; transition: opacity 0.4s ease; }
-#character { position: fixed; width: 100px; height: auto; transform-origin: bottom center; }
+#character { position: fixed; width: 110px; height: auto; transform-origin: bottom center; }
 
 #scoreDropImg { filter: hue-rotate(120deg) saturate(1.4) brightness(1.05); }
 #score { position: fixed; bottom: 20px; right: 20px; z-index: 10; font-size: 22px; font-family: Georgia, serif; background: rgba(255,255,255,0.72); padding: 5px 14px; border-radius: 20px; display: none; align-items: center; gap: 6px; }
@@ -25,6 +25,8 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #gameOver p  { font-family: Georgia, serif; color: #fff; font-size: 22px; }
 #playAgain { margin-top: 28px; font-family: Georgia, serif; font-size: 18px; background: rgba(255,255,255,0.82); border: none; padding: 8px 28px; border-radius: 20px; cursor: pointer; }
 #hint { position: fixed; bottom: 105px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
+@keyframes bgfall { from { transform: translateY(-8vh); } to { transform: translateY(108vh); } }
+.bg-rain { position: fixed; pointer-events: none; z-index: 0; height: auto; animation: bgfall linear infinite; }
 </style>
 </head>
 <body>
@@ -65,7 +67,7 @@ var charX = 50, charVelX = 0, facingRight = true;
 var pressedLeft = false, pressedRight = false;
 var CHAR_MAX = 0.65, CHAR_ACCEL = 0.07, CHAR_FRIC = 0.80;
 var velY = 0, offsetY = 0, isOnGround = true, jumpsLeft = 2, groundY = 0.84;
-var bgDrops = [], activeDrops = [], splats = [];
+var activeDrops = [], bgRainEls = [];
 var GRAVITY = 0.6, JUMP_VEL = -14;
 
 function getGroundYPct(x) { return groundY - Math.sin((x / 100) * Math.PI) * 0.04; }
@@ -98,7 +100,6 @@ function loop() {
   }
   updateChar();
   if (gameActive && !gamePaused) updateDrops();
-  updateBgRain();
   requestAnimationFrame(loop);
 }
 
@@ -136,12 +137,15 @@ document.addEventListener('pointercancel', function() { pressedLeft = false; pre
 // --- Game ---
 var gameActive = false, gamePaused = false, gameScore = 0, lives = 3, gameStartTime = 0;
 var dropSrcs = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i).src; });
+var dropImages = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i); });
+setupCssRain();
 
 document.getElementById('pauseBtn').addEventListener('click', function(e) {
   e.stopPropagation();
   gamePaused = !gamePaused;
   this.innerHTML = gamePaused ? '&#9654;' : '&#9646;&#9646;';
-  if (!gamePaused) { bgDrops = []; splats = []; }
+  var ps = gamePaused ? 'paused' : 'running';
+  bgRainEls.forEach(function(el) { el.style.animationPlayState = ps; });
 });
 
 function missedDrop() {
@@ -221,6 +225,7 @@ function startGame() {
   document.getElementById('scoreNum').textContent = '0';
   document.getElementById('gameOver').style.display = 'none';
   document.getElementById('pauseBtn').style.display = 'flex';
+  updateRainColors();
   fadeOutTitle();
   animateCloudToTop();
   spawnDrop();
@@ -327,94 +332,70 @@ function spawnAmbientDrop() {
   setTimeout(spawnAmbientDrop, delay);
 });
 
-// Background rain — canvas-based for performance
-var bgCanvas = document.createElement('canvas');
-bgCanvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:0;';
-document.body.appendChild(bgCanvas);
-var bgCtx = bgCanvas.getContext('2d');
 
-var dropImages = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i); });
 
-function resizeBgCanvas() {
-  bgCanvas.width  = window.innerWidth;
-  bgCanvas.height = window.innerHeight;
-}
-resizeBgCanvas();
-window.addEventListener('resize', resizeBgCanvas);
+// CSS-animated background rain (GPU-composited, zero JS per frame)
+var bgSplatCanvas = document.createElement('canvas');
+bgSplatCanvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:0;';
+document.body.appendChild(bgSplatCanvas);
+var bgSplatCtx = bgSplatCanvas.getContext('2d');
+function resizeSplatCanvas() { bgSplatCanvas.width = window.innerWidth; bgSplatCanvas.height = window.innerHeight; }
+resizeSplatCanvas();
+window.addEventListener('resize', resizeSplatCanvas);
 
-function spawnBgDrop() {
-  if (gamePaused || bgDrops.length > 55) return;
-  var size   = 12 + Math.floor(Math.random() * 22);
-  var roll   = Math.random();
-  var filter = !gameActive && roll < 0.1 ? 'hue-rotate(190deg) saturate(1.5) brightness(1.15)'
-             : !gameActive && roll < 0.2 ? 'hue-rotate(120deg) saturate(1.4) brightness(1.05)'
-             : '';
-  bgDrops.push({
-    x:      Math.random() * window.innerWidth,
-    y:      -(size + Math.random() * 80),
-    spd:    0.8 + Math.random() * 5.5,
-    size:   size,
-    opacity: 0.2 + Math.random() * 0.55,
-    imgIdx: Math.floor(Math.random() * dropImages.length),
-    filter: filter
-  });
-}
+function setupCssRain() {
+  var total = 100;
+  for (var i = 0; i < total; i++) {
+    var el    = document.createElement('img');
+    var size  = 16 + Math.floor(Math.random() * 28);
+    var dur   = (1.6 + Math.random() * 4.8).toFixed(2);
+    var delay = (-Math.random() * 7).toFixed(2);
+    var left  = (Math.random() * 103 - 1).toFixed(1);
+    var op    = (0.18 + Math.random() * 0.52).toFixed(2);
+    var colored = i < 10; // first 10 are home-screen colored drops
+    var filter = colored ? (i < 5
+      ? 'hue-rotate(190deg) saturate(1.5) brightness(1.15)'
+      : 'hue-rotate(120deg) saturate(1.4) brightness(1.05)') : '';
 
-function updateBgRain() {
-  if (!bgCtx) return;
-  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+    el.src = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
+    el.className = 'bg-rain' + (colored ? ' bg-rain-colored' : '');
+    el.style.width  = size + 'px';
+    el.style.left   = left + '%';
+    el.style.opacity = op;
+    el.style.animationDuration = dur + 's';
+    el.style.animationDelay   = delay + 's';
+    if (filter) el.style.filter = filter;
 
-  // Draw splats
-  splats = splats.filter(function(s) {
-    if (!gamePaused) s.age++;
-    var t = s.age / s.maxAge;
-    bgCtx.save();
-    bgCtx.globalAlpha = s.opacity * (1 - t);
-    if (s.filter) bgCtx.filter = s.filter;
-    bgCtx.translate(s.x, s.y);
-    bgCtx.scale(1 + t * 2.5, 0.35 * (1 - t * 0.6));
-    var img = dropImages[s.imgIdx];
-    if (img && img.complete) {
-      var hw = s.size / 2;
-      bgCtx.drawImage(img, -hw, -hw, s.size, s.size);
-    }
-    bgCtx.restore();
-    return s.age < s.maxAge;
-  });
+    // Splat on each loop completion
+    el.addEventListener('animationiteration', function() {
+      if (gamePaused) return;
+      var xPct = parseFloat(this.style.left);
+      var groundY = getGroundYPct(xPct) * bgSplatCanvas.height;
+      var sz = parseFloat(this.style.width);
+      bgSplatCtx.save();
+      bgSplatCtx.globalAlpha = parseFloat(this.style.opacity) * 0.6;
+      if (this.style.filter) bgSplatCtx.filter = this.style.filter;
+      bgSplatCtx.scale(1, 1);
+      var img = dropImages[Math.floor(Math.random() * dropImages.length)];
+      if (img && img.complete) bgSplatCtx.drawImage(img, xPct/100*bgSplatCanvas.width - sz, groundY - sz*0.2, sz*2, sz*0.45);
+      bgSplatCtx.restore();
+      // Fade splat out
+      setTimeout(function(x, y, w, h) {
+        bgSplatCtx.clearRect(x - 2, y - 2, w + 4, h + 4);
+      }.bind(null, xPct/100*bgSplatCanvas.width - sz, groundY - sz*0.2, sz*2, sz*0.45), 400);
+    }.bind(el));
 
-  // Draw and move drops
-  bgDrops = bgDrops.filter(function(d) {
-    if (!gamePaused) d.y += d.spd;
-    var xPct = (d.x / bgCanvas.width) * 100;
-    var groundPx = getGroundYPct(xPct) * bgCanvas.height;
-    if (!gamePaused && d.y + d.size * 0.5 >= groundPx) {
-      splats.push({ x:d.x, y:groundPx, size:d.size, opacity:d.opacity * 0.8,
-                    filter:d.filter, imgIdx:d.imgIdx, age:0, maxAge:18 });
-      return false;
-    }
-    if (!gamePaused && d.y > bgCanvas.height + 30) return false;
-    var img = dropImages[d.imgIdx];
-    if (!img || !img.complete) return true;
-    bgCtx.save();
-    bgCtx.globalAlpha = d.opacity;
-    if (d.filter) bgCtx.filter = d.filter;
-    var h = d.size * img.naturalHeight / (img.naturalWidth || 1);
-    bgCtx.drawImage(img, d.x - d.size / 2, d.y, d.size, h);
-    bgCtx.restore();
-    return true;
-  });
-}
-
-function scheduleBgRain() {
-  if (gamePaused) { setTimeout(scheduleBgRain, 300); return; }
-  var count = gameActive ? 9 : 2;
-  for (var i = 0; i < count; i++) {
-    setTimeout(spawnBgDrop, i * 40 + Math.random() * 60);
+    document.body.appendChild(el);
+    bgRainEls.push(el);
   }
-  setTimeout(scheduleBgRain, gameActive ? 90 + Math.random() * 80 : 400 + Math.random() * 400);
 }
 
-setTimeout(scheduleBgRain, 500);
+// Hide colored drops when game starts; show on home screen
+function updateRainColors() {
+  document.querySelectorAll('.bg-rain-colored').forEach(function(el) {
+    el.style.display = gameActive ? 'none' : '';
+  });
+}
 
 </script>
 </body>
