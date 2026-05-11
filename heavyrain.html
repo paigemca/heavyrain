@@ -72,16 +72,22 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 
 
 <script>
-// --- Character movement ---
-var charEl = document.getElementById('character');
-var charX = 50, charVelX = 0, facingRight = true;
-var pressedLeft = false, pressedRight = false;
-var CHAR_MAX = 0.90, CHAR_ACCEL = 0.11, CHAR_FRIC = 0.75;
-var velY = 0, offsetY = 0, isOnGround = true, jumpsLeft = 2, groundY = 0.84;
-var activeDrops = [], bgRainEls = [];
-var GRAVITY = 0.75, JUMP_VEL = -16;
+// ── Constants ────────────────────────────────────────────────
+var CHAR_MAX   = 0.90, CHAR_ACCEL = 0.11, CHAR_FRIC = 0.75;
+var GRAVITY    = 0.75, JUMP_VEL   = -16;
+var GROUND_HOME = 0.84, GROUND_GAME = 0.94, HILL_AMP = 0.04;
+var MAX_LIVES   = 3,   GOLD_CHANCE = 1 / 40;
+var CATCH_X     = 0.6, CATCH_Y     = 0.9;
 
-function getGroundYPct(x) { return groundY - Math.sin((x / 100) * Math.PI) * 0.04; }
+// ── Character state ──────────────────────────────────────────
+var charEl    = document.getElementById('character');
+var charX     = 50, charVelX = 0, facingRight = true;
+var pressedLeft = false, pressedRight = false;
+var velY      = 0, offsetY = 0, isOnGround = true, jumpsLeft = 2;
+var groundY   = GROUND_HOME;
+var activeDrops = [], bgRainEls = [];
+
+function getGroundYPct(x) { return groundY - Math.sin((x / 100) * Math.PI) * HILL_AMP; }
 
 function jump() {
   if (jumpsLeft > 0) { velY = JUMP_VEL; isOnGround = false; jumpsLeft--; }
@@ -122,6 +128,7 @@ document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 setTimeout(updateChar, 50);
 loop();
 
+// ── Keyboard controls ────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowLeft'  || e.key === 'a') { pressedLeft  = true;  e.preventDefault(); }
   if (e.key === 'ArrowRight' || e.key === 'd') { pressedRight = true;  e.preventDefault(); }
@@ -133,21 +140,21 @@ document.addEventListener('keyup', function(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') pressedRight = false;
 });
 
-// Touch / click controls — three zones: left | centre (jump) | right
+// Touch controls: left third | centre (jump) | right third
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'BUTTON') return;
   if (!gameActive) { startGame(); return; }
   var third = window.innerWidth / 3;
-  if (e.clientX < third)              { pressedLeft = true;  pressedRight = false; }
-  else if (e.clientX > third * 2)     { pressedRight = true; pressedLeft  = false; }
-  else                                { jump(); }
+  if (e.clientX < third)          { pressedLeft = true;  pressedRight = false; }
+  else if (e.clientX > third * 2) { pressedRight = true; pressedLeft  = false; }
+  else                            { jump(); }
 });
 document.addEventListener('pointerup',     function() { pressedLeft = false; pressedRight = false; });
 document.addEventListener('pointercancel', function() { pressedLeft = false; pressedRight = false; });
 
-// --- Game ---
-var gameActive = false, gamePaused = false, gameScore = 0, lives = 3, gameStartTime = 0;
-var dropSrcs = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i).src; });
+// ── Game state ───────────────────────────────────────────────
+var gameActive = false, gamePaused = false, gameScore = 0, lives = MAX_LIVES, gameStartTime = 0;
+var dropSrcs   = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i).src; });
 var dropImages = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i); });
 setupCssRain();
 
@@ -159,6 +166,7 @@ document.getElementById('pauseBtn').addEventListener('click', function(e) {
   bgRainEls.forEach(function(el) { el.style.animationPlayState = ps; });
 });
 
+// ── Game logic ───────────────────────────────────────────────
 function missedDrop() {
   lives--;
   var livesEl = document.getElementById('lives');
@@ -178,45 +186,30 @@ function endGame() {
   var prev = parseInt(localStorage.getItem('hrHighScore') || '0');
   var best = Math.max(prev, gameScore);
   localStorage.setItem('hrHighScore', best);
-  document.getElementById('bestScore').textContent = best > gameScore ? 'best: ' + best + ' raindrops' : (gameScore > 0 ? 'new best!' : '');
+  document.getElementById('bestScore').textContent = best > gameScore
+    ? 'best: ' + best + ' raindrops'
+    : (gameScore > 0 ? 'new best!' : '');
   document.getElementById('gameOver').style.display = 'flex';
 }
 
 document.getElementById('playAgain').addEventListener('click', function(e) {
   e.stopPropagation();
-  // Clear game over screen
   document.getElementById('gameOver').style.display = 'none';
-  document.getElementById('score').style.display = 'none';
-  document.getElementById('lives').style.display = 'none';
-  // Reset all state
-  gameActive = false;
-  gamePaused = false;
-  groundY = 0.84;
-  gameScore = 0;
-  charVelX = 0;
+  document.getElementById('score').style.display    = 'none';
+  document.getElementById('lives').style.display    = 'none';
+  gameActive  = false;
+  gamePaused  = false;
+  groundY     = GROUND_HOME;
+  gameScore   = 0;
+  charVelX    = 0;
   velY = 0; offsetY = 0; isOnGround = true; jumpsLeft = 2;
   document.getElementById('scoreNum').textContent = '0';
-  // Reset storm
-  document.getElementById('stormOverlay').style.opacity = '0';
-  bgRainEls.forEach(function(el) {
-    if (el._baseDur) el.style.animationDuration = el._baseDur + 's';
-  });
-  // Remove all active collectible drops
   activeDrops.forEach(function(d) { d.el.remove(); });
   activeDrops = [];
-  // Reset pause button
-  var pb = document.getElementById('pauseBtn');
-  pb.innerHTML = '&#9646;&#9646;';
-  pb.style.display = 'none';
-  // Restart CSS rain fresh — single batched reflow
-  bgRainEls.forEach(function(el) { el.style.animation = 'none'; });
-  void document.body.offsetWidth;
-  bgRainEls.forEach(function(el) {
-    var dur = parseFloat(el.style.animationDuration) || 3;
-    el.style.animation = '';
-    el.style.animationDelay = (-Math.random() * dur).toFixed(2) + 's';
-    el.style.animationPlayState = 'running';
-  });
+  document.getElementById('pauseBtn').innerHTML    = '&#9646;&#9646;';
+  document.getElementById('pauseBtn').style.display = 'none';
+  document.getElementById('stormOverlay').style.opacity = '0';
+  bgRainEls.forEach(function(el) { el.style.animationPlayState = 'running'; });
   startGame();
 });
 
@@ -228,37 +221,36 @@ function fadeOutTitle() {
 
 function animateCloudToTop() {
   var container = document.getElementById('cloudContainer');
-  var img = document.getElementById('cloud');
-  var ratio = img.naturalHeight / img.naturalWidth;
-  var newW = window.innerWidth * 1.15;
-  var newH = newW * ratio;
-  var targetTop = window.innerHeight * 0.10 - newH;
-  container.style.width = '115%';
+  var img       = document.getElementById('cloud');
+  var ratio     = img.naturalHeight / img.naturalWidth;
+  var newW      = window.innerWidth * 1.15;
+  var targetTop = window.innerHeight * 0.10 - newW * ratio;
+  container.style.width    = '115%';
   container.style.maxWidth = 'none';
-  container.style.top = Math.round(targetTop) + 'px';
+  container.style.top      = Math.round(targetTop) + 'px';
 }
 
 function startGame() {
   if (gameActive) return;
-  gameActive = true;
+  gameActive    = true;
   gameStartTime = Date.now();
-  groundY = 0.94;
-  document.getElementById('scoreDropImg').src = dropSrcs[0];
-  document.getElementById('score').style.display = 'block';
-  document.getElementById('hint').style.display  = 'none';
-  lives = 3;
+  groundY       = GROUND_GAME;
+  lives         = MAX_LIVES;
+  gameScore     = 0;
+  document.getElementById('scoreDropImg').src            = dropSrcs[0];
+  document.getElementById('score').style.display         = 'block';
+  document.getElementById('hint').style.display          = 'none';
+  document.getElementById('scoreNum').textContent        = '0';
+  document.getElementById('gameOver').style.display      = 'none';
+  document.getElementById('pauseBtn').style.display      = 'flex';
   var livesEl = document.getElementById('lives');
   livesEl.innerHTML = '';
   livesEl.style.display = 'flex';
-  for (var i = 0; i < 3; i++) {
+  for (var i = 0; i < MAX_LIVES; i++) {
     var li = document.createElement('img');
     li.src = dropSrcs[0];
     livesEl.appendChild(li);
   }
-  gameScore = 0;
-  document.getElementById('scoreNum').textContent = '0';
-  document.getElementById('gameOver').style.display = 'none';
-  document.getElementById('pauseBtn').style.display = 'flex';
   updateRainColors();
   fadeOutTitle();
   animateCloudToTop();
@@ -269,56 +261,57 @@ function startGame() {
 function scheduleDrop() {
   if (!gameActive) return;
   if (gamePaused) { setTimeout(scheduleDrop, 200); return; }
-  var elapsed = (Date.now() - gameStartTime) / 1000; // seconds
-  var base = Math.max(250, 1200 - elapsed * 14);     // 1200ms → 250ms over ~68s
-  var jitter = base * 0.3;
-  setTimeout(function() { spawnDrop(); scheduleDrop(); }, base + Math.random() * jitter);
+  var elapsed = (Date.now() - gameStartTime) / 1000;
+  var base    = Math.max(250, 1200 - elapsed * 14);
+  setTimeout(function() { spawnDrop(); scheduleDrop(); }, base + Math.random() * base * 0.3);
 }
 
 var COLLECT_TYPES = [
   { filter: 'hue-rotate(190deg) saturate(1.5) brightness(1.15)', type: 'gold' },
-  { filter: 'hue-rotate(90deg) saturate(0.85) brightness(1.45)', type: 'pink' }
+  { filter: 'hue-rotate(90deg) saturate(0.85) brightness(1.45)',  type: 'pink' }
 ];
 
 function spawnDrop() {
   var cr   = document.getElementById('cloud').getBoundingClientRect();
   var size = 22 + Math.floor(Math.random() * 16);
-  var sizeFactor = (size - 22) / 16;
-  var speedBoost = Math.min(gameScore * 0.03, 2.5);
-  var spd  = (3.2 - sizeFactor * 1.8) + speedBoost + Math.random() * 0.5;
+  var sf   = (size - 22) / 16;
+  var spd  = (3.2 - sf * 1.8) + Math.min(gameScore * 0.03, 2.5) + Math.random() * 0.5;
   var x    = cr.left + cr.width * 0.15 + Math.random() * cr.width * 0.70;
   var y    = cr.bottom - 10;
-  var type = Math.random() < 1/40 ? COLLECT_TYPES[0] : COLLECT_TYPES[1];
-  var src  = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
+  var type = Math.random() < GOLD_CHANCE ? COLLECT_TYPES[0] : COLLECT_TYPES[1];
   var el   = document.createElement('img');
-  el.src   = src;
+  el.src   = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
   el.style.cssText = 'position:fixed;left:0;top:0;width:' + size + 'px;height:auto;'
     + 'pointer-events:none;z-index:5;opacity:0.85;will-change:transform;'
     + 'filter:' + type.filter + ';'
-    + 'transform:translate(' + (x - size/2) + 'px,' + y + 'px);';
+    + 'transform:translate(' + (x - size / 2) + 'px,' + y + 'px);';
   document.body.appendChild(el);
-  activeDrops.push({ el:el, x:x, y:y, spd:spd, size:size, type:type.type });
+  activeDrops.push({ el: el, x: x, y: y, spd: spd, size: size, type: type.type });
 }
 
 function updateDrops() {
-  if (gamePaused) return;
-  var wh = window.innerHeight;
-  var ww = window.innerWidth;
-  var cW = charEl.offsetWidth  || 100;
-  var cH = charEl.offsetHeight || 200;
-  var cx = (charX / 100) * ww;
-  var cb = getGroundYPct(charX) * wh - offsetY;  // follow character during jump
-  var cl = cx - cW * 0.6, cr2 = cx + cW * 0.6, ct = cb - cH * 0.9;
+  var wh  = window.innerHeight, ww = window.innerWidth;
+  var cW  = charEl.offsetWidth  || 100;
+  var cH  = charEl.offsetHeight || 200;
+  var cx  = (charX / 100) * ww;
+  var cb  = getGroundYPct(charX) * wh - offsetY;
+  var cl  = cx - cW * CATCH_X, cr2 = cx + cW * CATCH_X, ct = cb - cH * CATCH_Y;
 
   activeDrops = activeDrops.filter(function(d) {
     d.y += d.spd;
     d.el.style.transform = 'translate(' + (d.x - d.size * 0.5) + 'px,' + d.y + 'px)';
+
     var groundPx = getGroundYPct((d.x / ww) * 100) * wh;
-    if (d.y + d.size * 0.5 >= groundPx) { d.el.remove(); if (d.type !== 'gold') missedDrop(); return false; }
+    if (d.y + d.size * 0.5 >= groundPx) {
+      d.el.remove();
+      if (d.type !== 'gold') missedDrop();
+      return false;
+    }
+
     var dl = d.x - d.size * 0.5, dr = d.x + d.size * 0.5, db = d.y + d.size;
     if (dr > cl && dl < cr2 && db > ct && d.y < cb) {
       if (d.type === 'gold') {
-        if (lives < 3) {
+        if (lives < MAX_LIVES) {
           lives++;
           var li = document.createElement('img');
           li.src = dropSrcs[0];
@@ -329,56 +322,15 @@ function updateDrops() {
         document.getElementById('scoreNum').textContent = gameScore;
       }
       d.el.style.transition = 'opacity 0.15s';
-      d.el.style.opacity = '0';
+      d.el.style.opacity    = '0';
       setTimeout(function(el) { el.remove(); }.bind(null, d.el), 160);
       return false;
     }
     return true;
   });
 }
-// Ambient drops on start screen
-var ambientActive = true;
 
-function spawnAmbientDrop() {
-  if (!ambientActive) return;
-  var cr  = document.getElementById('cloud').getBoundingClientRect();
-  var size = 18 + Math.floor(Math.random() * 18);
-  var x   = cr.left + cr.width * 0.1 + Math.random() * cr.width * 0.8;
-  var y   = cr.bottom - 5;
-  var spd = 0.6 + Math.random() * 0.8;
-  var src = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
-  var el  = document.createElement('img');
-  el.src  = src;
-  el.style.cssText = 'position:fixed;width:' + size + 'px;height:auto;' +
-    'left:' + (x - size/2) + 'px;top:' + y + 'px;' +
-    'pointer-events:none;z-index:0;opacity:0.45;transition:opacity 0.4s;';
-  document.body.appendChild(el);
-
-  // Fade in
-  requestAnimationFrame(function() { el.style.opacity = '0.55'; });
-
-  (function fall() {
-    if (!ambientActive) { el.remove(); return; }
-    y += spd;
-    el.style.top = y + 'px';
-    if (y > window.innerHeight + 20) {
-      el.remove();
-      // Respawn after a random pause
-      setTimeout(spawnAmbientDrop, 600 + Math.random() * 1400);
-    } else {
-      requestAnimationFrame(fall);
-    }
-  })();
-}
-
-// Seed a few drops at staggered intervals so the screen isn't empty at first
-[0, 900, 1800, 2700].forEach(function(delay) {
-  setTimeout(spawnAmbientDrop, delay);
-});
-
-
-
-// CSS-animated background rain (GPU-composited, zero JS per frame)
+// ── Background rain (CSS-animated, GPU-composited) ───────────
 var bgSplatCanvas = document.createElement('canvas');
 bgSplatCanvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:0;';
 document.body.appendChild(bgSplatCanvas);
@@ -388,90 +340,74 @@ resizeSplatCanvas();
 window.addEventListener('resize', resizeSplatCanvas);
 
 function setupCssRain() {
-  var total = 100;
-  for (var i = 0; i < total; i++) {
-    var el    = document.createElement('img');
-    var size  = Math.random() < 0.65
-      ? 8  + Math.floor(Math.random() * 12)   // small (8–20px)
-      : 22 + Math.floor(Math.random() * 24);  // larger (22–46px)
-    var dur   = (1.6 + Math.random() * 4.8).toFixed(2);
-    var delay = (-Math.random() * 7).toFixed(2);
-    var left  = (Math.random() * 103 - 1).toFixed(1);
-    var op    = (0.18 + Math.random() * 0.52).toFixed(2);
-    var colored = i < 10; // first 10 are home-screen colored drops
-    var filter = colored ? (i < 5
+  for (var i = 0; i < 100; i++) {
+    var el      = document.createElement('img');
+    var size    = Math.random() < 0.65 ? 8 + Math.floor(Math.random() * 12) : 22 + Math.floor(Math.random() * 24);
+    var dur     = (1.6 + Math.random() * 4.8).toFixed(2);
+    var colored = i < 10;
+    var filter  = colored ? (i < 5
       ? 'hue-rotate(190deg) saturate(1.5) brightness(1.15)'
       : 'hue-rotate(90deg) saturate(0.85) brightness(1.45)') : '';
 
     el.src = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
-    el.className = 'bg-rain' + (colored ? ' bg-rain-colored' : '');
-    el.style.width  = size + 'px';
-    el.style.left   = left + '%';
-    el.style.opacity = op;
+    el.className           = 'bg-rain' + (colored ? ' bg-rain-colored' : '');
+    el.style.width         = size + 'px';
+    el.style.left          = (Math.random() * 103 - 1).toFixed(1) + '%';
+    el.style.opacity       = (0.18 + Math.random() * 0.52).toFixed(2);
     el.style.animationDuration = dur + 's';
-    el._baseDur = dur;
-    el.style.animationDelay   = delay + 's';
+    el.style.animationDelay    = (-Math.random() * 7).toFixed(2) + 's';
+    el._baseDur = parseFloat(dur);
     if (filter) el.style.filter = filter;
 
-    // Splat on each loop completion
     el.addEventListener('animationiteration', function() {
       if (gamePaused) return;
-      var xPct = parseFloat(this.style.left);
-      var groundY = getGroundYPct(xPct) * bgSplatCanvas.height;
-      var sz = parseFloat(this.style.width);
+      var xPct      = parseFloat(this.style.left);
+      var splatY    = getGroundYPct(xPct) * bgSplatCanvas.height;
+      var sz        = parseFloat(this.style.width);
+      var splatX    = xPct / 100 * bgSplatCanvas.width;
+      var img       = dropImages[Math.floor(Math.random() * dropImages.length)];
       bgSplatCtx.save();
       bgSplatCtx.globalAlpha = parseFloat(this.style.opacity) * 0.6;
       if (this.style.filter) bgSplatCtx.filter = this.style.filter;
-      bgSplatCtx.scale(1, 1);
-      var img = dropImages[Math.floor(Math.random() * dropImages.length)];
-      if (img && img.complete) bgSplatCtx.drawImage(img, xPct/100*bgSplatCanvas.width - sz, groundY - sz*0.2, sz*2, sz*0.45);
+      if (img && img.complete) bgSplatCtx.drawImage(img, splatX - sz, splatY - sz * 0.2, sz * 2, sz * 0.45);
       bgSplatCtx.restore();
-      // Fade splat out
       setTimeout(function(x, y, w, h) {
         bgSplatCtx.clearRect(x - 2, y - 2, w + 4, h + 4);
-      }.bind(null, xPct/100*bgSplatCanvas.width - sz, groundY - sz*0.2, sz*2, sz*0.45), 400);
+      }.bind(null, splatX - sz, splatY - sz * 0.2, sz * 2, sz * 0.45), 400);
     }.bind(el));
 
     document.body.appendChild(el);
     bgRainEls.push(el);
   }
-  // Fast thin streak layer
+
   for (var j = 0; j < 45; j++) {
-    var s    = document.createElement('div');
-    var sH   = 12 + Math.floor(Math.random() * 20);
+    var s   = document.createElement('div');
     var sDur = (0.5 + Math.random() * 1.2).toFixed(2);
-    var sDel = (-Math.random() * 3).toFixed(2);
-    s.className = 'rain-streak';
-    s.style.width  = (1 + Math.random() * 2).toFixed(1) + 'px';
-    s.style.height = sH + 'px';
-    s.style.left   = (Math.random() * 102 - 1).toFixed(1) + '%';
-    s.style.animationDuration = sDur + 's';
+    s.className                = 'rain-streak';
+    s.style.width              = (1 + Math.random() * 2).toFixed(1) + 'px';
+    s.style.height             = (12 + Math.floor(Math.random() * 20)) + 'px';
+    s.style.left               = (Math.random() * 102 - 1).toFixed(1) + '%';
+    s.style.animationDuration  = sDur + 's';
+    s.style.animationDelay     = (-Math.random() * 3).toFixed(2) + 's';
     s._baseDur = parseFloat(sDur);
-    s.style.animationDelay   = sDel + 's';
     document.body.appendChild(s);
     bgRainEls.push(s);
   }
 }
 
-// Hide colored drops when game starts; show on home screen
 function updateRainColors() {
   document.querySelectorAll('.bg-rain-colored').forEach(function(el) {
     el.style.display = gameActive ? 'none' : '';
   });
 }
 
-// Storm intensifies over time
+// ── Storm intensity ──────────────────────────────────────────
 function updateStormIntensity() {
   if (!gameActive || gamePaused) return;
-  var elapsed = (Date.now() - gameStartTime) / 1000;
-  var t = Math.min(elapsed / 180, 1);            // 0→1 over 3 minutes
-
-  // Darken screen: up to 0.28 opacity
+  var t = Math.min((Date.now() - gameStartTime) / 1000 / 180, 1);
   document.getElementById('stormOverlay').style.opacity = (t * 0.28).toFixed(3);
-
 }
-
-setInterval(function() { if (gameActive && !gamePaused) updateStormIntensity(); }, 4000);
+setInterval(function() { updateStormIntensity(); }, 4000);
 
 </script>
 </body>
