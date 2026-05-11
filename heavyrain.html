@@ -104,7 +104,7 @@ function loop() {
 
 window.addEventListener('resize', updateChar);
 document.getElementById('hint').innerHTML = ('ontouchstart' in window)
-  ? 'tap anywhere to start<br><small>tap left &amp; right to move &nbsp;&bull;&nbsp; double tap to jump</small>'
+  ? 'tap anywhere to start<br><small>tap left / right to move &nbsp;&bull;&nbsp; tap centre to jump</small>'
   : 'click or press Enter to start<br><small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 setTimeout(updateChar, 50);
@@ -121,16 +121,14 @@ document.addEventListener('keyup', function(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') pressedRight = false;
 });
 
-// Touch / click controls
-var lastTapTime = 0;
+// Touch / click controls — three zones: left | centre (jump) | right
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'BUTTON') return;
   if (!gameActive) { startGame(); return; }
-  var now = Date.now();
-  if (now - lastTapTime < 300) { jump(); lastTapTime = 0; return; }
-  lastTapTime = now;
-  if (e.clientX < window.innerWidth / 2) { pressedLeft = true;  pressedRight = false; }
-  else                                   { pressedRight = true; pressedLeft  = false; }
+  var third = window.innerWidth / 3;
+  if (e.clientX < third)              { pressedLeft = true;  pressedRight = false; }
+  else if (e.clientX > third * 2)     { pressedRight = true; pressedLeft  = false; }
+  else                                { jump(); }
 });
 document.addEventListener('pointerup',     function() { pressedLeft = false; pressedRight = false; });
 document.addEventListener('pointercancel', function() { pressedLeft = false; pressedRight = false; });
