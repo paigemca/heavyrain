@@ -18,7 +18,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #score { position: fixed; bottom: 20px; right: 20px; z-index: 10; font-size: 22px; font-family: Georgia, serif; background: rgba(255,255,255,0.72); padding: 5px 14px; border-radius: 20px; display: none; align-items: center; gap: 6px; }
 #pauseBtn { position: fixed; bottom: 20px; left: 20px; z-index: 10; font-size: 18px; font-family: Georgia, serif; background: rgba(255,255,255,0.72); border: none; padding: 5px 14px; border-radius: 20px; cursor: pointer; display: none; align-items: center; box-shadow: none; }
 #lives { position: fixed; bottom: 20px; left: 70px; z-index: 10; display: none; flex-direction: row; align-items: center; gap: 5px; }
-#lives img { width: 20px; height: auto; opacity: 0.85; }
+#lives img { width: 20px; height: auto; opacity: 0.85; filter: hue-rotate(120deg) saturate(1.4) brightness(1.05); }
 #flash { position: fixed; inset: 0; z-index: 15; background: rgba(180,30,30,0.35); pointer-events: none; opacity: 0; transition: opacity 0.08s; }
 #gameOver { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); }
 #gameOver h1 { font-family: Georgia, serif; color: #fff; font-size: 44px; text-shadow: 0 2px 10px rgba(0,0,0,0.6); margin-bottom: 8px; }
@@ -65,7 +65,7 @@ var charX = 50, charVelX = 0, facingRight = true;
 var pressedLeft = false, pressedRight = false;
 var CHAR_MAX = 0.65, CHAR_ACCEL = 0.07, CHAR_FRIC = 0.80;
 var velY = 0, offsetY = 0, isOnGround = true, jumpsLeft = 2, groundY = 0.84;
-var bgDrops = [], activeDrops = [];
+var bgDrops = [], activeDrops = [], splats = [];
 var GRAVITY = 0.6, JUMP_VEL = -14;
 
 function getGroundYPct(x) { return groundY - Math.sin((x / 100) * Math.PI) * 0.04; }
@@ -143,6 +143,7 @@ document.getElementById('pauseBtn').addEventListener('click', function(e) {
   e.stopPropagation();
   gamePaused = !gamePaused;
   this.innerHTML = gamePaused ? '&#9654;' : '&#9646;&#9646;';
+  if (!gamePaused) { bgDrops = []; splats = []; }
 });
 
 function missedDrop() {
@@ -344,6 +345,7 @@ resizeBgCanvas();
 window.addEventListener('resize', resizeBgCanvas);
 
 function spawnBgDrop() {
+  if (bgDrops.length > 55) return;
   var size   = 12 + Math.floor(Math.random() * 22);
   var roll   = Math.random();
   var filter = !gameActive && roll < 0.1 ? 'hue-rotate(190deg) saturate(1.5) brightness(1.15)'
@@ -363,8 +365,35 @@ function spawnBgDrop() {
 function updateBgRain() {
   if (!bgCtx) return;
   bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+
+  // Draw splats
+  splats = splats.filter(function(s) {
+    s.age++;
+    var t = s.age / s.maxAge;
+    bgCtx.save();
+    bgCtx.globalAlpha = s.opacity * (1 - t);
+    if (s.filter) bgCtx.filter = s.filter;
+    bgCtx.translate(s.x, s.y);
+    bgCtx.scale(1 + t * 2.5, 0.35 * (1 - t * 0.6));
+    var img = dropImages[s.imgIdx];
+    if (img && img.complete) {
+      var hw = s.size / 2;
+      bgCtx.drawImage(img, -hw, -hw, s.size, s.size);
+    }
+    bgCtx.restore();
+    return s.age < s.maxAge;
+  });
+
+  // Draw and move drops
   bgDrops = bgDrops.filter(function(d) {
     d.y += d.spd;
+    var xPct = (d.x / bgCanvas.width) * 100;
+    var groundPx = getGroundYPct(xPct) * bgCanvas.height;
+    if (d.y + d.size * 0.5 >= groundPx) {
+      splats.push({ x:d.x, y:groundPx, size:d.size, opacity:d.opacity * 0.8,
+                    filter:d.filter, imgIdx:d.imgIdx, age:0, maxAge:18 });
+      return false;
+    }
     if (d.y > bgCanvas.height + 30) return false;
     var img = dropImages[d.imgIdx];
     if (!img || !img.complete) return true;
@@ -379,6 +408,7 @@ function updateBgRain() {
 }
 
 function scheduleBgRain() {
+  if (gamePaused) { setTimeout(scheduleBgRain, 300); return; }
   var count = gameActive ? 9 : 2;
   for (var i = 0; i < count; i++) {
     setTimeout(spawnBgDrop, i * 40 + Math.random() * 60);
