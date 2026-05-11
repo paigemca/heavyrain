@@ -1,6 +1,6 @@
 # heavy rain
 
-Catch as many raindrops as you can before you run out of lives.
+A hand-painted browser game. Stand in the rain and catch the coloured drops — but don't miss too many.
 
 **[Play here](https://paigemca.github.io/heavyrain/heavyrain.html)**
 
@@ -8,11 +8,11 @@ Catch as many raindrops as you can before you run out of lives.
 
 ## how to play
 
-Catch raindrops falling from the cloud overhead. You have 3 lives — miss a drop and you lose one. The rain gets heavier over time.
+Blue raindrops fall as atmosphere — ignore them. Catch the **gold and pink drops** before they hit the ground. You have 3 lives. Miss a coloured drop and you lose one. The rain gets heavier and faster the longer you survive.
 
 **Desktop**
 - `←` `→` arrow keys to move
-- `↑` or `Space` to jump
+- `↑` or `Space` to jump (double jump supported)
 - `Enter` or click to start
 
 **Mobile**

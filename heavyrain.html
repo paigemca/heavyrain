@@ -14,6 +14,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #title { position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: row; align-items: center; gap: 2vw; white-space: nowrap; transition: opacity 0.4s ease; }
 #character { position: fixed; width: 100px; height: auto; transform-origin: bottom center; }
 
+#scoreDropImg { filter: hue-rotate(120deg) saturate(1.4) brightness(1.05); }
 #score { position: fixed; bottom: 20px; right: 20px; z-index: 10; font-size: 22px; font-family: Georgia, serif; background: rgba(255,255,255,0.72); padding: 5px 14px; border-radius: 20px; display: none; align-items: center; gap: 6px; }
 #pauseBtn { position: fixed; bottom: 20px; left: 20px; z-index: 10; font-size: 18px; font-family: Georgia, serif; background: rgba(255,255,255,0.72); border: none; padding: 5px 14px; border-radius: 20px; cursor: pointer; display: none; align-items: center; box-shadow: none; }
 #lives { position: fixed; bottom: 20px; left: 70px; z-index: 10; display: none; flex-direction: row; align-items: center; gap: 5px; }
@@ -24,7 +25,6 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #gameOver p  { font-family: Georgia, serif; color: #fff; font-size: 22px; }
 #playAgain { margin-top: 28px; font-family: Georgia, serif; font-size: 18px; background: rgba(255,255,255,0.82); border: none; padding: 8px 28px; border-radius: 20px; cursor: pointer; }
 #hint { position: fixed; bottom: 105px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
-#spotify { position: fixed; top: 10px; right: 10px; display: none; transition: all 0.6s ease; z-index: 10; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.3); transition: opacity 0.5s; }
 </style>
 </head>
 <body>
@@ -53,9 +53,6 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 <div id="flash"></div>
 <div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><button id="playAgain">play again</button></div>
 <div id="score"><img src="" id="scoreDropImg" style="width:22px;height:auto;opacity:0.85;vertical-align:middle;"><span id="scoreNum" style="vertical-align:middle;">0</span></div>
-<div id="spotify">
-  <iframe id="spotifyFrame" src="https://open.spotify.com/embed/track/1RbQQWnEsE4RJUsIO7nFau?utm_source=generator&theme=1" width="280" height="80" frameborder="0" allowtransparency="true" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
-  <div style="text-align:center;padding:4px 0 2px;font-family:Georgia,serif;font-size:11px;"><a href="https://accounts.spotify.com/login" target="_blank" style="color:rgba(255,255,255,0.75);text-decoration:underline;">log in to spotify</a> for the full song</div>
 </div>
 <div id="hint"></div>
 
@@ -68,6 +65,7 @@ var charX = 50, charVelX = 0, facingRight = true;
 var pressedLeft = false, pressedRight = false;
 var CHAR_MAX = 0.65, CHAR_ACCEL = 0.07, CHAR_FRIC = 0.80;
 var velY = 0, offsetY = 0, isOnGround = true, jumpsLeft = 2, groundY = 0.84;
+var bgDrops = [], activeDrops = [];
 var GRAVITY = 0.6, JUMP_VEL = -14;
 
 function getGroundYPct(x) { return groundY - Math.sin((x / 100) * Math.PI) * 0.04; }
@@ -100,6 +98,7 @@ function loop() {
   }
   updateChar();
   if (gameActive) updateDrops();
+  updateBgRain();
   requestAnimationFrame(loop);
 }
 
@@ -137,7 +136,7 @@ document.addEventListener('pointerup',     function() { pressedLeft = false; pre
 document.addEventListener('pointercancel', function() { pressedLeft = false; pressedRight = false; });
 
 // --- Game ---
-var gameActive = false, gamePaused = false, gameScore = 0, lives = 3, activeDrops = [], gameStartTime = 0;
+var gameActive = false, gamePaused = false, gameScore = 0, lives = 3, gameStartTime = 0;
 var dropSrcs = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i).src; });
 
 document.getElementById('pauseBtn').addEventListener('click', function(e) {
@@ -176,7 +175,6 @@ document.getElementById('playAgain').addEventListener('click', function(e) {
   document.getElementById('lives').style.display = 'none';
   gameActive = false;
   groundY = 0.84;
-  document.getElementById('spotify').style.display = 'none';
   gameScore = 0;
   document.getElementById('scoreNum').textContent = '0';
   activeDrops.forEach(function(d) { d.el.remove(); });
@@ -224,11 +222,6 @@ function startGame() {
   document.getElementById('scoreNum').textContent = '0';
   document.getElementById('gameOver').style.display = 'none';
   document.getElementById('pauseBtn').style.display = 'flex';
-  ambientActive = false;
-  var sp = document.getElementById('spotify');
-  sp.style.display = 'block';
-  var sf = document.getElementById('spotifyFrame');
-  sf.src = 'https://open.spotify.com/embed/track/1RbQQWnEsE4RJUsIO7nFau?utm_source=generator&theme=1&autoplay=1';
   fadeOutTitle();
   animateCloudToTop();
   spawnDrop();
@@ -244,20 +237,27 @@ function scheduleDrop() {
   setTimeout(function() { spawnDrop(); scheduleDrop(); }, base + Math.random() * jitter);
 }
 
+var COLLECT_TYPES = [
+  { filter: 'hue-rotate(190deg) saturate(1.5) brightness(1.15)' },
+  { filter: 'hue-rotate(120deg) saturate(1.4) brightness(1.05)' }
+];
+
 function spawnDrop() {
   var cr   = document.getElementById('cloud').getBoundingClientRect();
   var size = 22 + Math.floor(Math.random() * 16);
+  var sizeFactor = (size - 22) / 16;
+  var speedBoost = Math.min(gameScore * 0.03, 2.5);
+  var spd  = (3.2 - sizeFactor * 1.8) + speedBoost + Math.random() * 0.5;
   var x    = cr.left + cr.width * 0.15 + Math.random() * cr.width * 0.70;
   var y    = cr.bottom - 10;
-  var sizeFactor = (size - 22) / 16;                      // 0=smallest/fastest, 1=largest/slowest
-  var speedBoost = Math.min(gameScore * 0.03, 2.5);        // softer ramp than before
-  var spd = (3.2 - sizeFactor * 1.8) + speedBoost + Math.random() * 0.5;
+  var type = COLLECT_TYPES[Math.floor(Math.random() * COLLECT_TYPES.length)];
   var src  = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
   var el   = document.createElement('img');
   el.src   = src;
-  el.style.cssText = 'position:fixed;width:' + size + 'px;height:auto;' +
-                     'left:' + (x - size/2) + 'px;top:' + y + 'px;' +
-                     'pointer-events:none;z-index:5;opacity:0.72;';
+  el.style.cssText = 'position:fixed;width:' + size + 'px;height:auto;'
+    + 'left:' + (x - size/2) + 'px;top:' + y + 'px;'
+    + 'pointer-events:none;z-index:5;opacity:0.85;'
+    + 'filter:' + type.filter + ';';
   document.body.appendChild(el);
   activeDrops.push({ el:el, x:x, y:y, spd:spd, size:size });
 }
@@ -328,58 +328,65 @@ function spawnAmbientDrop() {
   setTimeout(spawnAmbientDrop, delay);
 });
 
-// Ambient rain audio (Web Audio API)
-var audioCtx = null, rainGain = null, rainSource = null;
+// Background rain — canvas-based for performance
+var bgCanvas = document.createElement('canvas');
+bgCanvas.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:0;';
+document.body.appendChild(bgCanvas);
+var bgCtx = bgCanvas.getContext('2d');
 
-function startRainSound() {
-  try {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+var dropImages = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i); });
 
-    // White noise buffer (2s, looped)
-    var bufLen = audioCtx.sampleRate * 2;
-    var buf    = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
-    var data   = buf.getChannelData(0);
-    for (var i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+function resizeBgCanvas() {
+  bgCanvas.width  = window.innerWidth;
+  bgCanvas.height = window.innerHeight;
+}
+resizeBgCanvas();
+window.addEventListener('resize', resizeBgCanvas);
 
-    rainSource = audioCtx.createBufferSource();
-    rainSource.buffer = buf;
-    rainSource.loop   = true;
-
-    // Two filters layered: high-pass removes rumble, low-pass softens hiss
-    var hp = audioCtx.createBiquadFilter();
-    hp.type = 'highpass';  hp.frequency.value = 600;
-
-    var lp = audioCtx.createBiquadFilter();
-    lp.type = 'lowpass';   lp.frequency.value = 4000;
-
-    rainGain = audioCtx.createGain();
-    rainGain.gain.value = 0;
-
-    rainSource.connect(hp);
-    hp.connect(lp);
-    lp.connect(rainGain);
-    rainGain.connect(audioCtx.destination);
-
-    rainSource.start();
-    rainGain.gain.setTargetAtTime(0.12, audioCtx.currentTime, 1.2); // gentle fade-in
-  } catch(e) {}
+function spawnBgDrop() {
+  var size   = 12 + Math.floor(Math.random() * 22);
+  var roll   = Math.random();
+  var filter = !gameActive && roll < 0.1 ? 'hue-rotate(190deg) saturate(1.5) brightness(1.15)'
+             : !gameActive && roll < 0.2 ? 'hue-rotate(120deg) saturate(1.4) brightness(1.05)'
+             : '';
+  bgDrops.push({
+    x:      Math.random() * window.innerWidth,
+    y:      -(size + Math.random() * 80),
+    spd:    0.8 + Math.random() * 5.5,
+    size:   size,
+    opacity: 0.2 + Math.random() * 0.55,
+    imgIdx: Math.floor(Math.random() * dropImages.length),
+    filter: filter
+  });
 }
 
-function updateRainIntensity() {
-  if (!rainGain || !audioCtx || !gameActive) return;
-  var elapsed   = (Date.now() - gameStartTime) / 1000;
-  var intensity = Math.min(0.12 + (elapsed / 120) * 0.33, 0.45);
-  rainGain.gain.setTargetAtTime(intensity, audioCtx.currentTime, 2.0);
+function updateBgRain() {
+  if (!bgCtx) return;
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  bgDrops = bgDrops.filter(function(d) {
+    d.y += d.spd;
+    if (d.y > bgCanvas.height + 30) return false;
+    var img = dropImages[d.imgIdx];
+    if (!img || !img.complete) return true;
+    bgCtx.save();
+    bgCtx.globalAlpha = d.opacity;
+    if (d.filter) bgCtx.filter = d.filter;
+    var h = d.size * img.naturalHeight / (img.naturalWidth || 1);
+    bgCtx.drawImage(img, d.x - d.size / 2, d.y, d.size, h);
+    bgCtx.restore();
+    return true;
+  });
 }
 
-function stopRainSound() {
-  if (!rainGain || !audioCtx) return;
-  rainGain.gain.setTargetAtTime(0, audioCtx.currentTime, 1.0);
-  setTimeout(function() {
-    try { rainSource.stop(); audioCtx.close(); } catch(e) {}
-    audioCtx = null; rainGain = null; rainSource = null;
-  }, 2500);
+function scheduleBgRain() {
+  var count = gameActive ? 9 : 2;
+  for (var i = 0; i < count; i++) {
+    setTimeout(spawnBgDrop, i * 40 + Math.random() * 60);
+  }
+  setTimeout(scheduleBgRain, gameActive ? 90 + Math.random() * 80 : 400 + Math.random() * 400);
 }
+
+setTimeout(scheduleBgRain, 500);
 
 </script>
 </body>
