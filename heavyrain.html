@@ -55,6 +55,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 <div id="score"><img src="" id="scoreDropImg" style="width:22px;height:auto;opacity:0.85;vertical-align:middle;"><span id="scoreNum" style="vertical-align:middle;">0</span></div>
 <div id="spotify">
   <iframe src="https://open.spotify.com/embed/track/1RbQQWnEsE4RJUsIO7nFau?utm_source=generator&theme=1" width="240" height="80" frameborder="0" allowtransparency="true" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+  <div style="text-align:center;padding:4px 0 2px;font-family:Georgia,serif;font-size:11px;"><a href="https://accounts.spotify.com/login" target="_blank" style="color:rgba(255,255,255,0.75);text-decoration:underline;">log in to spotify</a> for the full song</div>
 </div>
 <div id="hint"></div>
 
@@ -104,8 +105,8 @@ function loop() {
 
 window.addEventListener('resize', updateChar);
 document.getElementById('hint').innerHTML = ('ontouchstart' in window)
-  ? 'tap anywhere to start<br><small>tap left &amp; right to move &nbsp;&bull;&nbsp; double tap to jump</small><br><small>log into spotify below for game audio</small>'
-  : 'click or press Enter to start<br><small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small><br><small>log into spotify below for game audio</small>';
+  ? 'tap anywhere to start<br><small>tap left &amp; right to move &nbsp;&bull;&nbsp; double tap to jump</small>'
+  : 'click or press Enter to start<br><small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 setTimeout(updateChar, 50);
 loop();
