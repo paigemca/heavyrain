@@ -12,7 +12,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #cloudContainer { position: fixed; top: 2%; left: 50%; transform: translateX(-50%); width: 69%; max-width: 813px; z-index: 2; pointer-events: none; transition: top 0.7s ease, width 0.7s ease; }
 #cloud { width: 100%; height: auto; display: block; }
 #title { position: absolute; top: 52%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: row; align-items: center; gap: 2vw; white-space: nowrap; transition: opacity 0.4s ease; }
-#character { position: fixed; width: 110px; height: auto; transform-origin: bottom center; }
+#character { position: fixed; left: 0; top: 0; width: 110px; height: auto; transform-origin: bottom center; will-change: transform; }
 
 #scoreDropImg { filter: hue-rotate(120deg) saturate(1.4) brightness(1.05); }
 #score { position: fixed; bottom: 20px; right: 20px; z-index: 10; font-size: 22px; font-family: Georgia, serif; background: rgba(255,255,255,0.72); padding: 5px 14px; border-radius: 20px; display: none; align-items: center; gap: 6px; }
@@ -25,7 +25,12 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #gameOver p  { font-family: Georgia, serif; color: #fff; font-size: 22px; }
 #playAgain { margin-top: 28px; font-family: Georgia, serif; font-size: 18px; background: rgba(255,255,255,0.82); border: none; padding: 8px 28px; border-radius: 20px; cursor: pointer; }
 #hint { position: fixed; bottom: 105px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
-@keyframes bgfall { from { transform: translateY(-8vh); } to { transform: translateY(108vh); } }
+@keyframes bgfall {
+  0%   { transform: translateY(-8vh); opacity: 0; }
+  6%   { opacity: 1; }
+  82%  { opacity: 1; }
+  100% { transform: translateY(93vh); opacity: 0; }
+}
 .bg-rain { position: fixed; pointer-events: none; z-index: 0; height: auto; animation: bgfall linear infinite; }
 </style>
 </head>
@@ -79,9 +84,9 @@ function jump() {
 function updateChar() {
   var ww = window.innerWidth, wh = window.innerHeight;
   var cW = charEl.offsetWidth || 100, cH = charEl.offsetHeight || 200;
-  charEl.style.left = Math.round((charX / 100) * ww - cW / 2) + 'px';
-  charEl.style.top  = Math.round(getGroundYPct(charX) * wh - cH - offsetY) + 'px';
-  charEl.style.transform = facingRight ? 'scaleX(1)' : 'scaleX(-1)';
+  var cx = Math.round((charX / 100) * ww - cW / 2);
+  var cy = Math.round(getGroundYPct(charX) * wh - cH - offsetY);
+  charEl.style.transform = 'translate(' + cx + 'px,' + cy + 'px)' + (facingRight ? '' : ' scaleX(-1)');
 }
 
 function loop() {
@@ -192,12 +197,11 @@ document.getElementById('playAgain').addEventListener('click', function(e) {
   var pb = document.getElementById('pauseBtn');
   pb.innerHTML = '&#9646;&#9646;';
   pb.style.display = 'none';
-  // Restart CSS rain fresh from random positions
+  // Restart CSS rain fresh — single batched reflow
+  bgRainEls.forEach(function(el) { el.style.animation = 'none'; });
+  void document.body.offsetWidth;
   bgRainEls.forEach(function(el) {
     var dur = parseFloat(el.style.animationDuration) || 3;
-    el.style.animationPlayState = 'running';
-    el.style.animation = 'none';
-    void el.offsetWidth;
     el.style.animation = '';
     el.style.animationDelay = (-Math.random() * dur).toFixed(2) + 's';
     el.style.animationPlayState = 'running';
@@ -277,10 +281,10 @@ function spawnDrop() {
   var src  = dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
   var el   = document.createElement('img');
   el.src   = src;
-  el.style.cssText = 'position:fixed;width:' + size + 'px;height:auto;'
-    + 'left:' + (x - size/2) + 'px;top:' + y + 'px;'
-    + 'pointer-events:none;z-index:5;opacity:0.85;'
-    + 'filter:' + type.filter + ';';
+  el.style.cssText = 'position:fixed;left:0;top:0;width:' + size + 'px;height:auto;'
+    + 'pointer-events:none;z-index:5;opacity:0.85;will-change:transform;'
+    + 'filter:' + type.filter + ';'
+    + 'transform:translate(' + (x - size/2) + 'px,' + y + 'px);';
   document.body.appendChild(el);
   activeDrops.push({ el:el, x:x, y:y, spd:spd, size:size, type:type.type });
 }
@@ -297,8 +301,9 @@ function updateDrops() {
 
   activeDrops = activeDrops.filter(function(d) {
     d.y += d.spd;
-    d.el.style.top = d.y + 'px';
-    if (d.y > wh + 20) { d.el.remove(); if (d.type !== 'gold') missedDrop(); return false; }
+    d.el.style.transform = 'translate(' + (d.x - d.size * 0.5) + 'px,' + d.y + 'px)';
+    var groundPx = getGroundYPct((d.x / ww) * 100) * wh;
+    if (d.y + d.size * 0.5 >= groundPx) { d.el.remove(); if (d.type !== 'gold') missedDrop(); return false; }
     var dl = d.x - d.size * 0.5, dr = d.x + d.size * 0.5, db = d.y + d.size;
     if (dr > cl && dl < cr2 && db > ct && d.y < cb) {
       gameScore++;
