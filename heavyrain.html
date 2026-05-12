@@ -82,12 +82,12 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 <button id="pauseBtn">&#9646;&#9646;</button>
 <div id="lives"></div>
 <div id="flash"></div>
-<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><p id="submitMsg" style="font-family:Georgia,serif;font-size:13px;color:rgba(255,255,255,0.8);margin-top:10px;min-height:18px;"></p><button id="playAgain">play again</button><button id="gameOverLeaderboardBtn" style="margin-top:6px;font-family:Georgia,serif;font-size:14px;background:transparent;border:none;color:rgba(255,255,255,0.75);cursor:pointer;text-decoration:underline;">&#127942; leaderboard</button></div>
+<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><p id="submitMsg" style="font-family:Georgia,serif;font-size:13px;color:rgba(255,255,255,0.8);margin-top:10px;min-height:18px;"></p><button id="playAgain">play again</button><button id="gameOverLeaderboardBtn" style="margin-top:6px;font-family:Georgia,serif;font-size:14px;background:transparent;border:none;color:rgba(255,255,255,0.75);cursor:pointer;text-decoration:underline;">leaderboard</button></div>
 <div id="score"><img src="" id="scoreDropImg" style="width:22px;height:auto;opacity:0.85;vertical-align:middle;"><span id="scoreNum" style="vertical-align:middle;">0</span></div>
 </div>
 <div id="hint"></div>
 <div id="leaderboardPanel"><h2>leaderboard</h2><ul id="leaderboardList"></ul><button id="closeLeaderboard">close</button></div>
-<button id="leaderboardBtn">&#127942; leaderboard</button>
+<button id="leaderboardBtn">leaderboard</button>
 <div id="highScore"></div>
 <div id="nameWrap"><input id="nameInput" placeholder="your name" maxlength="20" autocomplete="off" spellcheck="false"><div id="nameError"></div></div>
 <button id="startBtn">play</button>
@@ -228,6 +228,11 @@ var gameActive = false, gamePaused = false, gameScore = 0, lives = MAX_LIVES, ga
 var dropSrcs   = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i).src; });
 var dropImages = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i); });
 var starSrcs   = [0,1,2,3].map(function(i) { return document.getElementById('star'+i).src; });
+var starBtnImg = '<img src="' + starSrcs[0] + '" style="width:18px;height:auto;vertical-align:middle;margin-right:5px;filter:brightness(1.15) saturate(1.1);">';
+elLeaderBtn.innerHTML = starBtnImg + 'leaderboard';
+document.getElementById('gameOverLeaderboardBtn').innerHTML = starBtnImg + 'leaderboard';
+var starTitleImg = '<img src="' + starSrcs[2] + '" style="width:22px;height:auto;vertical-align:middle;filter:brightness(1.15) saturate(1.1);">';
+document.querySelector('#leaderboardPanel h2').innerHTML = starTitleImg + ' leaderboard ' + starTitleImg;
 var starImages = [0,1,2,3].map(function(i) { return document.getElementById('star'+i); });
 var heartSrc   = document.getElementById('heart').src;
 setupCssRain();
