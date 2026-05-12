@@ -518,19 +518,18 @@ function autoSubmitScore(score) {
   if (!alias || score <= 0) return;
   var msg = document.getElementById('submitMsg');
   msg.textContent = 'submitting…';
-  fetch(SUPA_URL + '/rest/v1/leaderboard?on_conflict=alias', {
+  fetch(SUPA_URL + '/rest/v1/rpc/upsert_high_score', {
     method: 'POST',
-    headers: Object.assign(supaHeaders(true), { 'Prefer': 'resolution=merge-duplicates,return=representation' }),
-    body: JSON.stringify({ alias: alias, score: score })
+    headers: supaHeaders(true),
+    body: JSON.stringify({ p_alias: alias, p_score: score })
   }).then(function(r) {
     if (r.ok) {
-      msg.textContent = 'score submitted as "' + alias + '"!';
-      // Refresh leaderboard if already open
+      msg.textContent = 'score saved for "' + alias + '"!';
       if (document.getElementById('leaderboardPanel').style.display === 'block') fetchLeaderboard();
     } else {
       r.text().then(function(t) { msg.textContent = 'error: ' + t.substring(0, 80); });
     }
-  }).catch(function(e) { msg.textContent = 'network error — check connection'; });
+  }).catch(function() { msg.textContent = 'network error — check connection'; });
 }
 
 function fetchLeaderboard() {
