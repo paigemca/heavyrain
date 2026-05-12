@@ -114,8 +114,19 @@ var elHint       = document.getElementById('hint');
 var elFlash      = document.getElementById('flash');
 var elStorm      = document.getElementById('stormOverlay');
 var elFinalScore  = document.getElementById('finalScore');
+var elBestScore   = document.getElementById('bestScore');
+var elSubmitMsg   = document.getElementById('submitMsg');
+var elNameWrap    = document.getElementById('nameWrap');
+var elNameInput   = document.getElementById('nameInput');
+var elNameError   = document.getElementById('nameError');
+var elStartBtn    = document.getElementById('startBtn');
 var elHighScore   = document.getElementById('highScore');
-var elBestScore  = document.getElementById('bestScore');
+var elLeaderPanel = document.getElementById('leaderboardPanel');
+var elLeaderList  = document.getElementById('leaderboardList');
+var elLeaderBtn   = document.getElementById('leaderboardBtn');
+var elCloudImg    = document.getElementById('cloud');
+var elCloudCont   = document.getElementById('cloudContainer');
+var elScoreDropImg = document.getElementById('scoreDropImg');
 
 // ── Character state ──────────────────────────────────────────
 var charX     = 50, charVelX = 0, facingRight = true;
@@ -136,7 +147,7 @@ function updateCharDimensions() {
 }
 
 function updateCloudRect() {
-  cloudRect = document.getElementById('cloud').getBoundingClientRect();
+  cloudRect = elCloudImg.getBoundingClientRect();
 }
 
 function jump() {
@@ -265,9 +276,9 @@ function endGame() {
   elGameOver.style.display = 'flex';
   elHighScore.style.display = '';
   renderHighScore();
-  document.getElementById('leaderboardBtn').style.display = 'none';
-  document.getElementById('nameWrap').style.display = '';
-  document.getElementById('submitMsg').textContent = '';
+  elLeaderBtn.style.display = 'none';
+  elNameWrap.style.display = '';
+  elSubmitMsg.textContent = '';
   autoSubmitScore(gameScore, gameScore > prev);
 }
 
@@ -300,8 +311,8 @@ function fadeOutTitle() {
 }
 
 function animateCloudToTop() {
-  var container = document.getElementById('cloudContainer');
-  var img       = document.getElementById('cloud');
+  var container = elCloudCont;
+  var img       = elCloudImg;
   var ratio     = img.naturalHeight / img.naturalWidth;
   var newW      = window.innerWidth * 1.15;
   var targetTop = window.innerHeight * 0.10 - newW * ratio;
@@ -318,13 +329,13 @@ function startGame() {
   groundY       = GROUND_GAME;
   lives         = MAX_LIVES;
   gameScore     = 0;
-  document.getElementById('scoreDropImg').src = starSrcs[0];
+  elScoreDropImg.src = starSrcs[0];
   elScore.style.display    = 'block';
   elHint.style.display       = 'none';
   elHighScore.style.display  = 'none';
-  document.getElementById('nameWrap').style.display = 'none';
-  document.getElementById('startBtn').style.display = 'none';
-  document.getElementById('leaderboardBtn').style.display = 'none';
+  elNameWrap.style.display = 'none';
+  elStartBtn.style.display = 'none';
+  elLeaderBtn.style.display = 'none';
   elScoreNum.textContent   = '0';
   elGameOver.style.display = 'none';
   elPauseBtn.style.display = 'flex';
@@ -516,7 +527,7 @@ function supaHeaders(withContent) {
 function autoSubmitScore(score, isNewBest) {
   var alias = playerAlias.trim();
   if (!alias || score <= 0) return;
-  var msg = document.getElementById('submitMsg');
+  var msg = elSubmitMsg;
   fetch(SUPA_URL + '/rest/v1/rpc/upsert_high_score', {
     method: 'POST',
     headers: supaHeaders(true),
@@ -524,7 +535,7 @@ function autoSubmitScore(score, isNewBest) {
   }).then(function(r) {
     if (r.ok) {
       if (isNewBest) msg.textContent = 'new high score saved for "' + alias + '"!';
-      if (document.getElementById('leaderboardPanel').style.display === 'block') fetchLeaderboard();
+      if (elLeaderPanel.style.display === 'block') fetchLeaderboard();
     } else {
       r.text().then(function(t) { msg.textContent = 'error: ' + t.substring(0, 80); });
     }
@@ -532,7 +543,7 @@ function autoSubmitScore(score, isNewBest) {
 }
 
 function fetchLeaderboard() {
-  var list = document.getElementById('leaderboardList');
+  var list = elLeaderList;
   list.innerHTML = '<li style="color:#aaa;border:none;">loading…</li>';
   fetch(SUPA_URL + '/rest/v1/leaderboard?select=alias,score&order=score.desc&limit=10', {
     headers: supaHeaders(false)
@@ -549,7 +560,7 @@ function fetchLeaderboard() {
 }
 
 // Name input — save to localStorage, stop propagation so it doesn't trigger game start
-var nameInputEl = document.getElementById('nameInput');
+var nameInputEl = elNameInput;
 nameInputEl.value = playerAlias;
 nameInputEl.addEventListener('input', function() {
   playerAlias = this.value;
@@ -560,34 +571,34 @@ nameInputEl.addEventListener('keydown',     function(e) { e.stopPropagation(); }
 
 document.getElementById('gameOverLeaderboardBtn').addEventListener('click', function(e) {
   e.stopPropagation();
-  document.getElementById('leaderboardPanel').style.display = 'block';
+  elLeaderPanel.style.display = 'block';
   fetchLeaderboard();
 });
 
-document.getElementById('leaderboardBtn').addEventListener('click', function(e) {
+elLeaderBtn.addEventListener('click', function(e) {
   e.stopPropagation();
-  document.getElementById('leaderboardPanel').style.display = 'block';
+  elLeaderPanel.style.display = 'block';
   fetchLeaderboard();
 });
 
 document.getElementById('closeLeaderboard').addEventListener('click', function(e) {
   e.stopPropagation();
-  document.getElementById('leaderboardPanel').style.display = 'none';
+  elLeaderPanel.style.display = 'none';
 });
 
 function tryStartGame() {
   var alias = playerAlias.trim();
-  var errEl = document.getElementById('nameError');
+  var errEl = elNameError;
   if (!alias) {
     errEl.textContent = 'please enter your name first';
-    document.getElementById('nameInput').focus();
+    elNameInput.focus();
     return;
   }
   errEl.textContent = '';
   startGame();
 }
 
-document.getElementById('startBtn').addEventListener('click', function(e) {
+elStartBtn.addEventListener('click', function(e) {
   e.stopPropagation();
   tryStartGame();
 });
