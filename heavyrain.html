@@ -42,13 +42,13 @@ img { -webkit-touch-callout: none; pointer-events: none; }
   border-radius: 3px; background: rgba(100, 130, 190, 0.55);
   animation: bgstreak linear infinite; }
 .bg-rain { position: fixed; pointer-events: none; z-index: 0; height: auto; animation: bgfall linear infinite; }
-#leaderboardPanel { position: fixed; top: 35%; left: 50%; transform: translate(-50%,-50%); z-index: 20; background: rgba(255,255,255,0.95); border-radius: 16px; padding: 20px 28px; min-width: 240px; font-family: Georgia, serif; display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
-#leaderboardPanel h2 { font-size: 18px; text-align: center; margin-bottom: 12px; color: #333; }
+#leaderboardPanel { position: fixed; top: 35%; left: 50%; transform: translate(-50%,-50%); z-index: 20; background: rgba(80, 110, 165, 0.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: 16px; padding: 20px 28px; min-width: 240px; font-family: Georgia, serif; display: none; box-shadow: 0 4px 24px rgba(0,0,0,0.4); }
+#leaderboardPanel h2 { font-size: 18px; text-align: center; margin-bottom: 12px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.3); }
 #leaderboardList { list-style: none; padding: 0; margin: 0; }
-#leaderboardList li { padding: 5px 0; font-size: 14px; color: #333; display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid rgba(0,0,0,0.07); }
+#leaderboardList li { padding: 5px 0; font-size: 14px; color: rgba(255,255,255,0.9); display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid rgba(255,255,255,0.2); }
 #leaderboardList li:last-child { border-bottom: none; }
-#leaderboardList .rank { color: #aaa; min-width: 20px; }
-#closeLeaderboard { display: block; margin: 14px auto 0; font-family: Georgia, serif; font-size: 14px; background: transparent; border: none; color: #888; cursor: pointer; }
+#leaderboardList .rank { color: rgba(255,255,255,0.55); min-width: 20px; }
+#closeLeaderboard { display: block; margin: 14px auto 0; font-family: Georgia, serif; font-size: 14px; background: transparent; border: none; color: rgba(255,255,255,0.65); cursor: pointer; }
 #leaderboardBtn { position: fixed; bottom: 20px; right: 20px; z-index: 10; font-family: Georgia, serif; font-size: 14px; background: rgba(255,255,255,0.72); border: none; padding: 5px 14px; border-radius: 20px; cursor: pointer; }
 </style>
 </head>
@@ -265,10 +265,10 @@ function endGame() {
   elGameOver.style.display = 'flex';
   elHighScore.style.display = '';
   renderHighScore();
-  document.getElementById('leaderboardBtn').style.display = '';
+  document.getElementById('leaderboardBtn').style.display = 'none';
   document.getElementById('nameWrap').style.display = '';
   document.getElementById('submitMsg').textContent = '';
-  autoSubmitScore(gameScore);
+  autoSubmitScore(gameScore, gameScore > prev);
 }
 
 document.getElementById('playAgain').addEventListener('click', function(e) {
@@ -513,18 +513,17 @@ function supaHeaders(withContent) {
   return h;
 }
 
-function autoSubmitScore(score) {
+function autoSubmitScore(score, isNewBest) {
   var alias = playerAlias.trim();
   if (!alias || score <= 0) return;
   var msg = document.getElementById('submitMsg');
-  msg.textContent = 'submitting…';
   fetch(SUPA_URL + '/rest/v1/rpc/upsert_high_score', {
     method: 'POST',
     headers: supaHeaders(true),
     body: JSON.stringify({ p_alias: alias, p_score: score })
   }).then(function(r) {
     if (r.ok) {
-      msg.textContent = 'score saved for "' + alias + '"!';
+      if (isNewBest) msg.textContent = 'new high score saved for "' + alias + '"!';
       if (document.getElementById('leaderboardPanel').style.display === 'block') fetchLeaderboard();
     } else {
       r.text().then(function(t) { msg.textContent = 'error: ' + t.substring(0, 80); });
