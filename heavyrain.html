@@ -23,6 +23,9 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #gameOver h1 { font-family: Georgia, serif; color: #fff; font-size: 44px; text-shadow: 0 2px 10px rgba(0,0,0,0.6); margin-bottom: 8px; }
 #gameOver p  { font-family: Georgia, serif; color: #fff; font-size: 22px; }
 #playAgain { margin-top: 28px; font-family: Georgia, serif; font-size: 18px; background: rgba(255,255,255,0.82); border: none; padding: 8px 28px; border-radius: 20px; cursor: pointer; }
+#nameInput { font-family: Georgia, serif; font-size: 15px; text-align: center; border: none; border-bottom: 1px solid rgba(255,255,255,0.55); background: transparent; color: #fff; outline: none; width: 160px; padding: 4px 2px; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+#nameInput::placeholder { color: rgba(255,255,255,0.55); }
+#nameWrap { position: fixed; bottom: 48px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center; pointer-events: auto; }
 #highScore { position: fixed; bottom: 68px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 13px; font-family: Georgia, serif; color: rgba(255,255,255,0.75); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; white-space: nowrap; }
 #hint { position: fixed; bottom: 105px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
 @keyframes bgfall {
@@ -37,11 +40,6 @@ img { -webkit-touch-callout: none; pointer-events: none; }
   border-radius: 3px; background: rgba(100, 130, 190, 0.55);
   animation: bgstreak linear infinite; }
 .bg-rain { position: fixed; pointer-events: none; z-index: 0; height: auto; animation: bgfall linear infinite; }
-#scoreSubmit { margin-top: 14px; display: none; flex-direction: column; align-items: center; gap: 8px; }
-#aliasInput { font-family: Georgia, serif; font-size: 16px; text-align: center; border: none; border-bottom: 1px solid rgba(255,255,255,0.6); background: transparent; color: #fff; outline: none; width: 160px; padding: 4px; }
-#aliasInput::placeholder { color: rgba(255,255,255,0.5); }
-#submitScoreBtn { font-family: Georgia, serif; font-size: 15px; background: rgba(255,255,255,0.82); border: none; padding: 6px 20px; border-radius: 20px; cursor: pointer; }
-#submitMsg { font-family: Georgia, serif; font-size: 13px; color: rgba(255,255,255,0.8); min-height: 18px; }
 #leaderboardPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 20; background: rgba(255,255,255,0.95); border-radius: 16px; padding: 20px 28px; min-width: 240px; font-family: Georgia, serif; display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
 #leaderboardPanel h2 { font-size: 18px; text-align: center; margin-bottom: 12px; color: #333; }
 #leaderboardList { list-style: none; padding: 0; margin: 0; }
@@ -82,13 +80,14 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 <button id="pauseBtn">&#9646;&#9646;</button>
 <div id="lives"></div>
 <div id="flash"></div>
-<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><div id="scoreSubmit"><input id="aliasInput" placeholder="enter your name" maxlength="20" autocomplete="off"><button id="submitScoreBtn">submit score</button><span id="submitMsg"></span></div><button id="playAgain">play again</button></div>
+<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><p id="submitMsg" style="font-family:Georgia,serif;font-size:13px;color:rgba(255,255,255,0.8);margin-top:10px;min-height:18px;"></p><button id="playAgain">play again</button></div>
 <div id="score"><img src="" id="scoreDropImg" style="width:22px;height:auto;opacity:0.85;vertical-align:middle;"><span id="scoreNum" style="vertical-align:middle;">0</span></div>
 </div>
 <div id="hint"></div>
 <div id="leaderboardPanel"><h2>leaderboard</h2><ul id="leaderboardList"></ul><button id="closeLeaderboard">close</button></div>
 <button id="leaderboardBtn">&#127942; leaderboard</button>
 <div id="highScore"></div>
+<div id="nameWrap"><input id="nameInput" placeholder="your name" maxlength="20" autocomplete="off" spellcheck="false"></div>
 
 
 
@@ -268,12 +267,8 @@ function endGame() {
   elHighScore.style.display = '';
   renderHighScore();
   document.getElementById('leaderboardBtn').style.display = '';
-  // Show score submit form
-  var sf = document.getElementById('scoreSubmit');
-  document.getElementById('aliasInput').value = '';
   document.getElementById('submitMsg').textContent = '';
-  document.getElementById('submitScoreBtn').disabled = false;
-  sf.style.display = gameScore > 0 ? 'flex' : 'none';
+  autoSubmitScore(gameScore);
 }
 
 document.getElementById('playAgain').addEventListener('click', function(e) {
@@ -504,9 +499,11 @@ function scheduleStormUpdate() {
   }, 4000);
 }
 
+
 // ── Leaderboard (Supabase) ───────────────────────────────────
-var SUPA_URL = 'https://xalsozgsdssqxzwikrdm.supabase.co';
-var SUPA_KEY = '__SUPA_KEY__';
+var SUPA_URL  = 'https://xalsozgsdssqxzwikrdm.supabase.co';
+var SUPA_KEY  = '__SUPA_KEY__';
+var playerAlias = localStorage.getItem('hrAlias') || '';
 
 function supaHeaders(withContent) {
   var h = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
@@ -514,28 +511,17 @@ function supaHeaders(withContent) {
   return h;
 }
 
-function submitScore(alias, score) {
-  var btn = document.getElementById('submitScoreBtn');
+function autoSubmitScore(score) {
+  var alias = playerAlias.trim();
+  if (!alias || score <= 0) return;
   var msg = document.getElementById('submitMsg');
-  btn.disabled = true;
-  msg.textContent = 'submitting…';
-  fetch(SUPA_URL + '/rest/v1/leaderboard', {
+  fetch(SUPA_URL + '/rest/v1/leaderboard?on_conflict=alias', {
     method: 'POST',
-    headers: supaHeaders(true),
-    body: JSON.stringify({ alias: alias.trim().substring(0, 20), score: score })
+    headers: Object.assign(supaHeaders(true), { 'Prefer': 'resolution=merge-duplicates' }),
+    body: JSON.stringify({ alias: alias, score: score })
   }).then(function(r) {
-    if (r.ok) {
-      document.getElementById('scoreSubmit').style.display = 'none';
-      msg.textContent = 'score submitted!';
-      msg.style.display = 'block';
-    } else {
-      msg.textContent = 'could not submit — try again';
-      btn.disabled = false;
-    }
-  }).catch(function() {
-    msg.textContent = 'could not submit — try again';
-    btn.disabled = false;
-  });
+    msg.textContent = r.ok ? 'score submitted as "' + alias + '"!' : '';
+  }).catch(function() {});
 }
 
 function fetchLeaderboard() {
@@ -545,26 +531,25 @@ function fetchLeaderboard() {
     headers: supaHeaders(false)
   }).then(function(r) { return r.json(); })
     .then(function(rows) {
-      if (!rows || !rows.length) { list.innerHTML = '<li style="color:#aaa;border:none;">no scores yet</li>'; return; }
+      if (!rows || !rows.length) { list.innerHTML = '<li style="color:#aaa;border:none;">no scores yet — be first!</li>'; return; }
       list.innerHTML = rows.map(function(row, i) {
-        return '<li><span class="rank">' + (i+1) + '</span><span>' + row.alias + '</span><span>' + row.score + '</span></li>';
+        var cls = row.alias === playerAlias ? ' style="font-weight:bold"' : '';
+        return '<li' + cls + '><span class="rank">' + (i+1) + '</span><span>' + row.alias + '</span><span>' + row.score + '</span></li>';
       }).join('');
     }).catch(function() {
       list.innerHTML = '<li style="color:#aaa;border:none;">could not load</li>';
     });
 }
 
-document.getElementById('submitScoreBtn').addEventListener('click', function(e) {
-  e.stopPropagation();
-  var alias = document.getElementById('aliasInput').value.trim();
-  if (!alias) { document.getElementById('submitMsg').textContent = 'please enter a name'; return; }
-  submitScore(alias, gameScore);
+// Name input — save to localStorage, stop propagation so it doesn't trigger game start
+var nameInputEl = document.getElementById('nameInput');
+nameInputEl.value = playerAlias;
+nameInputEl.addEventListener('input', function() {
+  playerAlias = this.value;
+  localStorage.setItem('hrAlias', playerAlias);
 });
-
-document.getElementById('aliasInput').addEventListener('keydown', function(e) {
-  e.stopPropagation();
-  if (e.key === 'Enter') document.getElementById('submitScoreBtn').click();
-});
+nameInputEl.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
+nameInputEl.addEventListener('keydown',     function(e) { e.stopPropagation(); });
 
 document.getElementById('leaderboardBtn').addEventListener('click', function(e) {
   e.stopPropagation();
