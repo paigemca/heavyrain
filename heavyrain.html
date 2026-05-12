@@ -19,7 +19,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #pauseBtn { position: fixed; bottom: 20px; left: 20px; z-index: 10; font-size: 18px; font-family: Georgia, serif; background: rgba(255,255,255,0.72); border: none; padding: 5px 14px; border-radius: 20px; cursor: pointer; display: none; align-items: center; box-shadow: none; }
 #lives { position: fixed; bottom: 20px; left: 70px; z-index: 10; display: none; flex-direction: row; align-items: center; gap: 5px; }
 #lives img { width: 20px; height: auto; opacity: 0.85; filter: hue-rotate(90deg) saturate(0.85) brightness(1.45); }
-#flash { position: fixed; inset: 0; z-index: 15; background: rgba(180,30,30,0.35); pointer-events: none; opacity: 0; transition: opacity 0.08s; }
+#flash { position: fixed; inset: 0; z-index: 15; background: #fff; pointer-events: none; opacity: 0; transition: opacity 0.06s; }
 #gameOver { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; align-items: center; justify-content: center; background: rgba(0,0,0,0.45); }
 #gameOver h1 { font-family: Georgia, serif; color: #fff; font-size: 44px; text-shadow: 0 2px 10px rgba(0,0,0,0.6); margin-bottom: 8px; }
 #gameOver p  { font-family: Georgia, serif; color: #fff; font-size: 22px; }
@@ -73,21 +73,47 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 
 <script>
 // ── Constants ────────────────────────────────────────────────
-var CHAR_MAX   = 0.90, CHAR_ACCEL = 0.11, CHAR_FRIC = 0.75;
-var GRAVITY    = 0.75, JUMP_VEL   = -16;
+var CHAR_MAX    = 0.90, CHAR_ACCEL = 0.11, CHAR_FRIC = 0.75;
+var GRAVITY     = 0.75, JUMP_VEL   = -16;
 var GROUND_HOME = 0.84, GROUND_GAME = 0.94, HILL_AMP = 0.04;
-var MAX_LIVES   = 3,   GOLD_CHANCE = 1 / 40;
-var CATCH_X     = 0.6, CATCH_Y     = 0.9;
+var MAX_LIVES   = 3,    GOLD_CHANCE = 1 / 40;
+var CATCH_X     = 0.6,  CATCH_Y    = 0.9;
+var FRAME_MS    = 1000 / 60;  // target 60 fps on ProMotion displays
+
+// ── Cached DOM refs ──────────────────────────────────────────
+var charEl       = document.getElementById('character');
+var elPauseBtn   = document.getElementById('pauseBtn');
+var elGameOver   = document.getElementById('gameOver');
+var elLives      = document.getElementById('lives');
+var elScore      = document.getElementById('score');
+var elScoreNum   = document.getElementById('scoreNum');
+var elHint       = document.getElementById('hint');
+var elFlash      = document.getElementById('flash');
+var elStorm      = document.getElementById('stormOverlay');
+var elFinalScore = document.getElementById('finalScore');
+var elBestScore  = document.getElementById('bestScore');
 
 // ── Character state ──────────────────────────────────────────
-var charEl    = document.getElementById('character');
 var charX     = 50, charVelX = 0, facingRight = true;
 var pressedLeft = false, pressedRight = false;
 var velY      = 0, offsetY = 0, isOnGround = true, jumpsLeft = 2;
 var groundY   = GROUND_HOME;
-var activeDrops = [], bgRainEls = [];
+var charW     = 100, charH = 200;  // cached dimensions
+var activeDrops = [], bgRainEls = [], coloredRainEls = [];
+var cloudRect  = null;  // cached cloud bounding rect
+var rainDurs   = new WeakMap();  // maps rain elements to base duration
+var splatTimes = new WeakMap();  // rate-limits splat events per element
 
 function getGroundYPct(x) { return groundY - Math.sin((x / 100) * Math.PI) * HILL_AMP; }
+
+function updateCharDimensions() {
+  charW = charEl.offsetWidth  || 100;
+  charH = charEl.offsetHeight || 200;
+}
+
+function updateCloudRect() {
+  cloudRect = document.getElementById('cloud').getBoundingClientRect();
+}
 
 function jump() {
   if (jumpsLeft > 0) { velY = JUMP_VEL; isOnGround = false; jumpsLeft--; }
@@ -95,13 +121,17 @@ function jump() {
 
 function updateChar() {
   var ww = window.innerWidth, wh = window.innerHeight;
-  var cW = charEl.offsetWidth || 100, cH = charEl.offsetHeight || 200;
-  var cx = Math.round((charX / 100) * ww - cW / 2);
-  var cy = Math.round(getGroundYPct(charX) * wh - cH - offsetY);
+  var cx = Math.round((charX / 100) * ww - charW / 2);
+  var cy = Math.round(getGroundYPct(charX) * wh - charH - offsetY);
   charEl.style.transform = 'translate(' + cx + 'px,' + cy + 'px)' + (facingRight ? '' : ' scaleX(-1)');
 }
 
-function loop() {
+// Frame-rate cap so game speed is consistent on 120Hz ProMotion displays
+var lastFrameTime = 0;
+function loop(ts) {
+  if (ts - lastFrameTime < FRAME_MS * 0.9) { requestAnimationFrame(loop); return; }
+  lastFrameTime = ts;
+
   if (!gamePaused) {
     if (pressedLeft)       charVelX = Math.max(charVelX - CHAR_ACCEL, -CHAR_MAX);
     else if (pressedRight) charVelX = Math.min(charVelX + CHAR_ACCEL,  CHAR_MAX);
@@ -120,13 +150,14 @@ function loop() {
   requestAnimationFrame(loop);
 }
 
-window.addEventListener('resize', updateChar);
-document.getElementById('hint').innerHTML = ('ontouchstart' in window)
+window.addEventListener('resize', function() { updateCharDimensions(); updateCloudRect(); });
+charEl.addEventListener('load', function() { updateCharDimensions(); updateCloudRect(); });
+elHint.innerHTML = ('ontouchstart' in window)
   ? 'tap anywhere to start<br><small>tap left / right to move &nbsp;&bull;&nbsp; tap centre to jump</small>'
   : 'click or press Enter to start<br><small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
-setTimeout(updateChar, 50);
-loop();
+setTimeout(function() { updateCharDimensions(); updateCloudRect(); }, 50);
+requestAnimationFrame(loop);
 
 // ── Keyboard controls ────────────────────────────────────────
 document.addEventListener('keydown', function(e) {
@@ -143,7 +174,11 @@ document.addEventListener('keyup', function(e) {
 // Touch controls: left third | centre (jump) | right third
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'BUTTON') return;
-  if (!gameActive) { startGame(); return; }
+  if (!gameActive) {
+    if (elGameOver.style.display === 'flex') return;
+    startGame();
+    return;
+  }
   var third = window.innerWidth / 3;
   if (e.clientX < third)          { pressedLeft = true;  pressedRight = false; }
   else if (e.clientX > third * 2) { pressedRight = true; pressedLeft  = false; }
@@ -158,7 +193,7 @@ var dropSrcs   = [0,1,2,3,4].map(function(i) { return document.getElementById('d
 var dropImages = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i); });
 setupCssRain();
 
-document.getElementById('pauseBtn').addEventListener('click', function(e) {
+elPauseBtn.addEventListener('click', function(e) {
   e.stopPropagation();
   gamePaused = !gamePaused;
   this.innerHTML = gamePaused ? '&#9654;' : '&#9646;&#9646;';
@@ -167,48 +202,58 @@ document.getElementById('pauseBtn').addEventListener('click', function(e) {
 });
 
 // ── Game logic ───────────────────────────────────────────────
+var flashTimer = 0;
+function triggerFlash() {
+  clearTimeout(flashTimer);
+  elFlash.style.opacity = '0.85';
+  flashTimer = setTimeout(function() {
+    elFlash.style.opacity = '0';
+    setTimeout(function() {
+      elFlash.style.opacity = '0.35';
+      setTimeout(function() { elFlash.style.opacity = '0'; }, 90);
+    }, 60);
+  }, 70);
+}
+
 function missedDrop() {
   lives--;
-  var livesEl = document.getElementById('lives');
-  if (livesEl.lastChild) livesEl.removeChild(livesEl.lastChild);
-  var fl = document.getElementById('flash');
-  fl.style.opacity = '1';
-  setTimeout(function() { fl.style.opacity = '0'; }, 120);
+  if (elLives.lastChild) elLives.removeChild(elLives.lastChild);
+  triggerFlash();
   if (lives <= 0) endGame();
 }
 
 function endGame() {
   gameActive = false;
   gamePaused = false;
-  document.getElementById('pauseBtn').style.display = 'none';
-  document.getElementById('pauseBtn').innerHTML = '&#9646;&#9646;';
-  document.getElementById('finalScore').textContent = 'you caught ' + gameScore + ' raindrops';
+  elPauseBtn.style.display   = 'none';
+  elPauseBtn.innerHTML       = '&#9646;&#9646;';
+  elFinalScore.textContent   = 'you caught ' + gameScore + ' raindrops';
   var prev = parseInt(localStorage.getItem('hrHighScore') || '0');
   var best = Math.max(prev, gameScore);
   localStorage.setItem('hrHighScore', best);
-  document.getElementById('bestScore').textContent = best > gameScore
+  elBestScore.textContent = best > gameScore
     ? 'best: ' + best + ' raindrops'
     : (gameScore > 0 ? 'new best!' : '');
-  document.getElementById('gameOver').style.display = 'flex';
+  elGameOver.style.display = 'flex';
 }
 
 document.getElementById('playAgain').addEventListener('click', function(e) {
   e.stopPropagation();
-  document.getElementById('gameOver').style.display = 'none';
-  document.getElementById('score').style.display    = 'none';
-  document.getElementById('lives').style.display    = 'none';
+  elGameOver.style.display = 'none';
+  elScore.style.display    = 'none';
+  elLives.style.display    = 'none';
   gameActive  = false;
   gamePaused  = false;
   groundY     = GROUND_HOME;
   gameScore   = 0;
   charVelX    = 0;
   velY = 0; offsetY = 0; isOnGround = true; jumpsLeft = 2;
-  document.getElementById('scoreNum').textContent = '0';
+  elScoreNum.textContent     = '0';
+  elStorm.style.opacity      = '0';
+  elPauseBtn.innerHTML       = '&#9646;&#9646;';
+  elPauseBtn.style.display   = 'none';
   activeDrops.forEach(function(d) { d.el.remove(); });
   activeDrops = [];
-  document.getElementById('pauseBtn').innerHTML    = '&#9646;&#9646;';
-  document.getElementById('pauseBtn').style.display = 'none';
-  document.getElementById('stormOverlay').style.opacity = '0';
   bgRainEls.forEach(function(el) { el.style.animationPlayState = 'running'; });
   startGame();
 });
@@ -228,6 +273,7 @@ function animateCloudToTop() {
   container.style.width    = '115%';
   container.style.maxWidth = 'none';
   container.style.top      = Math.round(targetTop) + 'px';
+  setTimeout(updateCloudRect, 750);  // refresh after CSS transition
 }
 
 function startGame() {
@@ -237,25 +283,25 @@ function startGame() {
   groundY       = GROUND_GAME;
   lives         = MAX_LIVES;
   gameScore     = 0;
-  document.getElementById('scoreDropImg').src            = dropSrcs[0];
-  document.getElementById('score').style.display         = 'block';
-  document.getElementById('hint').style.display          = 'none';
-  document.getElementById('scoreNum').textContent        = '0';
-  document.getElementById('gameOver').style.display      = 'none';
-  document.getElementById('pauseBtn').style.display      = 'flex';
-  var livesEl = document.getElementById('lives');
-  livesEl.innerHTML = '';
-  livesEl.style.display = 'flex';
+  document.getElementById('scoreDropImg').src = dropSrcs[0];
+  elScore.style.display    = 'block';
+  elHint.style.display     = 'none';
+  elScoreNum.textContent   = '0';
+  elGameOver.style.display = 'none';
+  elPauseBtn.style.display = 'flex';
+  elLives.innerHTML = '';
+  elLives.style.display = 'flex';
   for (var i = 0; i < MAX_LIVES; i++) {
     var li = document.createElement('img');
     li.src = dropSrcs[0];
-    livesEl.appendChild(li);
+    elLives.appendChild(li);
   }
   updateRainColors();
   fadeOutTitle();
   animateCloudToTop();
   spawnDrop();
   scheduleDrop();
+  scheduleStormUpdate();
 }
 
 function scheduleDrop() {
@@ -272,7 +318,8 @@ var COLLECT_TYPES = [
 ];
 
 function spawnDrop() {
-  var cr   = document.getElementById('cloud').getBoundingClientRect();
+  if (!cloudRect) updateCloudRect();
+  var cr   = cloudRect;
   var size = 22 + Math.floor(Math.random() * 16);
   var sf   = (size - 22) / 16;
   var spd  = (3.2 - sf * 1.8) + Math.min(gameScore * 0.03, 2.5) + Math.random() * 0.5;
@@ -291,18 +338,15 @@ function spawnDrop() {
 
 function updateDrops() {
   var wh  = window.innerHeight, ww = window.innerWidth;
-  var cW  = charEl.offsetWidth  || 100;
-  var cH  = charEl.offsetHeight || 200;
   var cx  = (charX / 100) * ww;
   var cb  = getGroundYPct(charX) * wh - offsetY;
-  var cl  = cx - cW * CATCH_X, cr2 = cx + cW * CATCH_X, ct = cb - cH * CATCH_Y;
+  var cl  = cx - charW * CATCH_X, cr2 = cx + charW * CATCH_X, ct = cb - charH * CATCH_Y;
 
   activeDrops = activeDrops.filter(function(d) {
     d.y += d.spd;
     d.el.style.transform = 'translate(' + (d.x - d.size * 0.5) + 'px,' + d.y + 'px)';
 
-    var groundPx = getGroundYPct((d.x / ww) * 100) * wh;
-    if (d.y + d.size * 0.5 >= groundPx) {
+    if (d.y + d.size * 0.5 >= getGroundYPct((d.x / ww) * 100) * wh) {
       d.el.remove();
       if (d.type !== 'gold') missedDrop();
       return false;
@@ -311,15 +355,13 @@ function updateDrops() {
     var dl = d.x - d.size * 0.5, dr = d.x + d.size * 0.5, db = d.y + d.size;
     if (dr > cl && dl < cr2 && db > ct && d.y < cb) {
       if (d.type === 'gold') {
-        if (lives < MAX_LIVES) {
-          lives++;
-          var li = document.createElement('img');
-          li.src = dropSrcs[0];
-          document.getElementById('lives').appendChild(li);
-        }
+        lives++;
+        var li = document.createElement('img');
+        li.src = dropSrcs[0];
+        elLives.appendChild(li);
       } else {
         gameScore++;
-        document.getElementById('scoreNum').textContent = gameScore;
+        elScoreNum.textContent = gameScore;
       }
       d.el.style.transition = 'opacity 0.15s';
       d.el.style.opacity    = '0';
@@ -343,7 +385,7 @@ function setupCssRain() {
   for (var i = 0; i < 100; i++) {
     var el      = document.createElement('img');
     var size    = Math.random() < 0.65 ? 8 + Math.floor(Math.random() * 12) : 22 + Math.floor(Math.random() * 24);
-    var dur     = (1.6 + Math.random() * 4.8).toFixed(2);
+    var dur     = 1.6 + Math.random() * 4.8;
     var colored = i < 10;
     var filter  = colored ? (i < 5
       ? 'hue-rotate(190deg) saturate(1.5) brightness(1.15)'
@@ -354,18 +396,22 @@ function setupCssRain() {
     el.style.width         = size + 'px';
     el.style.left          = (Math.random() * 103 - 1).toFixed(1) + '%';
     el.style.opacity       = (0.18 + Math.random() * 0.52).toFixed(2);
-    el.style.animationDuration = dur + 's';
+    el.style.animationDuration = dur.toFixed(2) + 's';
     el.style.animationDelay    = (-Math.random() * 7).toFixed(2) + 's';
-    el._baseDur = parseFloat(dur);
+    rainDurs.set(el, dur);
     if (filter) el.style.filter = filter;
+    if (colored) coloredRainEls.push(el);
 
     el.addEventListener('animationiteration', function() {
       if (gamePaused) return;
-      var xPct      = parseFloat(this.style.left);
-      var splatY    = getGroundYPct(xPct) * bgSplatCanvas.height;
-      var sz        = parseFloat(this.style.width);
-      var splatX    = xPct / 100 * bgSplatCanvas.width;
-      var img       = dropImages[Math.floor(Math.random() * dropImages.length)];
+      var now = Date.now();
+      if (now - (splatTimes.get(this) || 0) < 150) return;
+      splatTimes.set(this, now);
+      var xPct   = parseFloat(this.style.left);
+      var splatY = getGroundYPct(xPct) * bgSplatCanvas.height;
+      var sz     = parseFloat(this.style.width);
+      var splatX = xPct / 100 * bgSplatCanvas.width;
+      var img    = dropImages[Math.floor(Math.random() * dropImages.length)];
       bgSplatCtx.save();
       bgSplatCtx.globalAlpha = parseFloat(this.style.opacity) * 0.6;
       if (this.style.filter) bgSplatCtx.filter = this.style.filter;
@@ -381,33 +427,34 @@ function setupCssRain() {
   }
 
   for (var j = 0; j < 45; j++) {
-    var s   = document.createElement('div');
-    var sDur = (0.5 + Math.random() * 1.2).toFixed(2);
+    var s    = document.createElement('div');
+    var sDur = 0.5 + Math.random() * 1.2;
     s.className                = 'rain-streak';
     s.style.width              = (1 + Math.random() * 2).toFixed(1) + 'px';
     s.style.height             = (12 + Math.floor(Math.random() * 20)) + 'px';
     s.style.left               = (Math.random() * 102 - 1).toFixed(1) + '%';
-    s.style.animationDuration  = sDur + 's';
+    s.style.animationDuration  = sDur.toFixed(2) + 's';
     s.style.animationDelay     = (-Math.random() * 3).toFixed(2) + 's';
-    s._baseDur = parseFloat(sDur);
+    rainDurs.set(s, sDur);
     document.body.appendChild(s);
     bgRainEls.push(s);
   }
 }
 
 function updateRainColors() {
-  document.querySelectorAll('.bg-rain-colored').forEach(function(el) {
-    el.style.display = gameActive ? 'none' : '';
-  });
+  var hide = gameActive;
+  coloredRainEls.forEach(function(el) { el.style.display = hide ? 'none' : ''; });
 }
 
-// ── Storm intensity ──────────────────────────────────────────
-function updateStormIntensity() {
-  if (!gameActive || gamePaused) return;
-  var t = Math.min((Date.now() - gameStartTime) / 1000 / 180, 1);
-  document.getElementById('stormOverlay').style.opacity = (t * 0.28).toFixed(3);
+// ── Storm intensity (recursive setTimeout — self-correcting) ─
+function scheduleStormUpdate() {
+  setTimeout(function() {
+    if (!gameActive) return;
+    var t = Math.min((Date.now() - gameStartTime) / 1000 / 180, 1);
+    elStorm.style.opacity = (t * 0.28).toFixed(3);
+    scheduleStormUpdate();
+  }, 4000);
 }
-setInterval(function() { updateStormIntensity(); }, 4000);
 
 </script>
 </body>
