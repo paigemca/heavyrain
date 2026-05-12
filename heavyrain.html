@@ -37,6 +37,19 @@ img { -webkit-touch-callout: none; pointer-events: none; }
   border-radius: 3px; background: rgba(100, 130, 190, 0.55);
   animation: bgstreak linear infinite; }
 .bg-rain { position: fixed; pointer-events: none; z-index: 0; height: auto; animation: bgfall linear infinite; }
+#scoreSubmit { margin-top: 14px; display: none; flex-direction: column; align-items: center; gap: 8px; }
+#aliasInput { font-family: Georgia, serif; font-size: 16px; text-align: center; border: none; border-bottom: 1px solid rgba(255,255,255,0.6); background: transparent; color: #fff; outline: none; width: 160px; padding: 4px; }
+#aliasInput::placeholder { color: rgba(255,255,255,0.5); }
+#submitScoreBtn { font-family: Georgia, serif; font-size: 15px; background: rgba(255,255,255,0.82); border: none; padding: 6px 20px; border-radius: 20px; cursor: pointer; }
+#submitMsg { font-family: Georgia, serif; font-size: 13px; color: rgba(255,255,255,0.8); min-height: 18px; }
+#leaderboardPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 20; background: rgba(255,255,255,0.95); border-radius: 16px; padding: 20px 28px; min-width: 240px; font-family: Georgia, serif; display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+#leaderboardPanel h2 { font-size: 18px; text-align: center; margin-bottom: 12px; color: #333; }
+#leaderboardList { list-style: none; padding: 0; margin: 0; }
+#leaderboardList li { padding: 5px 0; font-size: 14px; color: #333; display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid rgba(0,0,0,0.07); }
+#leaderboardList li:last-child { border-bottom: none; }
+#leaderboardList .rank { color: #aaa; min-width: 20px; }
+#closeLeaderboard { display: block; margin: 14px auto 0; font-family: Georgia, serif; font-size: 14px; background: transparent; border: none; color: #888; cursor: pointer; }
+#leaderboardBtn { position: fixed; bottom: 20px; right: 20px; z-index: 10; font-family: Georgia, serif; font-size: 14px; background: rgba(255,255,255,0.72); border: none; padding: 5px 14px; border-radius: 20px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -69,10 +82,12 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 <button id="pauseBtn">&#9646;&#9646;</button>
 <div id="lives"></div>
 <div id="flash"></div>
-<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><button id="playAgain">play again</button></div>
+<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><div id="scoreSubmit"><input id="aliasInput" placeholder="enter your name" maxlength="20" autocomplete="off"><button id="submitScoreBtn">submit score</button><span id="submitMsg"></span></div><button id="playAgain">play again</button></div>
 <div id="score"><img src="" id="scoreDropImg" style="width:22px;height:auto;opacity:0.85;vertical-align:middle;"><span id="scoreNum" style="vertical-align:middle;">0</span></div>
 </div>
 <div id="hint"></div>
+<div id="leaderboardPanel"><h2>leaderboard</h2><ul id="leaderboardList"></ul><button id="closeLeaderboard">close</button></div>
+<button id="leaderboardBtn">&#127942; leaderboard</button>
 <div id="highScore"></div>
 
 
@@ -250,7 +265,15 @@ function endGame() {
     ? 'best: ' + best + ' raindrops'
     : (gameScore > 0 ? 'new best!' : '');
   elGameOver.style.display = 'flex';
+  elHighScore.style.display = '';
   renderHighScore();
+  document.getElementById('leaderboardBtn').style.display = '';
+  // Show score submit form
+  var sf = document.getElementById('scoreSubmit');
+  document.getElementById('aliasInput').value = '';
+  document.getElementById('submitMsg').textContent = '';
+  document.getElementById('submitScoreBtn').disabled = false;
+  sf.style.display = gameScore > 0 ? 'flex' : 'none';
 }
 
 document.getElementById('playAgain').addEventListener('click', function(e) {
@@ -302,8 +325,9 @@ function startGame() {
   gameScore     = 0;
   document.getElementById('scoreDropImg').src = starSrcs[0];
   elScore.style.display    = 'block';
-  elHint.style.display      = 'none';
-  elHighScore.style.display = 'none';
+  elHint.style.display       = 'none';
+  elHighScore.style.display  = 'none';
+  document.getElementById('leaderboardBtn').style.display = 'none';
   elScoreNum.textContent   = '0';
   elGameOver.style.display = 'none';
   elPauseBtn.style.display = 'flex';
@@ -479,6 +503,79 @@ function scheduleStormUpdate() {
     scheduleStormUpdate();
   }, 4000);
 }
+
+// ── Leaderboard (Supabase) ───────────────────────────────────
+var SUPA_URL = 'https://xalsozgsdssqxzwikrdm.supabase.co';
+var SUPA_KEY = '__SUPA_KEY__';
+
+function supaHeaders(withContent) {
+  var h = { 'apikey': SUPA_KEY, 'Authorization': 'Bearer ' + SUPA_KEY };
+  if (withContent) h['Content-Type'] = 'application/json';
+  return h;
+}
+
+function submitScore(alias, score) {
+  var btn = document.getElementById('submitScoreBtn');
+  var msg = document.getElementById('submitMsg');
+  btn.disabled = true;
+  msg.textContent = 'submitting…';
+  fetch(SUPA_URL + '/rest/v1/leaderboard', {
+    method: 'POST',
+    headers: supaHeaders(true),
+    body: JSON.stringify({ alias: alias.trim().substring(0, 20), score: score })
+  }).then(function(r) {
+    if (r.ok) {
+      document.getElementById('scoreSubmit').style.display = 'none';
+      msg.textContent = 'score submitted!';
+      msg.style.display = 'block';
+    } else {
+      msg.textContent = 'could not submit — try again';
+      btn.disabled = false;
+    }
+  }).catch(function() {
+    msg.textContent = 'could not submit — try again';
+    btn.disabled = false;
+  });
+}
+
+function fetchLeaderboard() {
+  var list = document.getElementById('leaderboardList');
+  list.innerHTML = '<li style="color:#aaa;border:none;">loading…</li>';
+  fetch(SUPA_URL + '/rest/v1/leaderboard?select=alias,score&order=score.desc&limit=10', {
+    headers: supaHeaders(false)
+  }).then(function(r) { return r.json(); })
+    .then(function(rows) {
+      if (!rows || !rows.length) { list.innerHTML = '<li style="color:#aaa;border:none;">no scores yet</li>'; return; }
+      list.innerHTML = rows.map(function(row, i) {
+        return '<li><span class="rank">' + (i+1) + '</span><span>' + row.alias + '</span><span>' + row.score + '</span></li>';
+      }).join('');
+    }).catch(function() {
+      list.innerHTML = '<li style="color:#aaa;border:none;">could not load</li>';
+    });
+}
+
+document.getElementById('submitScoreBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  var alias = document.getElementById('aliasInput').value.trim();
+  if (!alias) { document.getElementById('submitMsg').textContent = 'please enter a name'; return; }
+  submitScore(alias, gameScore);
+});
+
+document.getElementById('aliasInput').addEventListener('keydown', function(e) {
+  e.stopPropagation();
+  if (e.key === 'Enter') document.getElementById('submitScoreBtn').click();
+});
+
+document.getElementById('leaderboardBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  document.getElementById('leaderboardPanel').style.display = 'block';
+  fetchLeaderboard();
+});
+
+document.getElementById('closeLeaderboard').addEventListener('click', function(e) {
+  e.stopPropagation();
+  document.getElementById('leaderboardPanel').style.display = 'none';
+});
 
 </script>
 </body>
