@@ -25,7 +25,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #playAgain { margin-top: 28px; font-family: Georgia, serif; font-size: 18px; background: rgba(255,255,255,0.82); border: none; padding: 8px 28px; border-radius: 20px; cursor: pointer; }
 #nameInput { font-family: Georgia, serif; font-size: 15px; text-align: center; border: none; border-bottom: 1px solid rgba(255,255,255,0.55); background: transparent; color: #fff; outline: none; width: 160px; padding: 4px 2px; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 #nameInput::placeholder { color: rgba(255,255,255,0.55); }
-#nameWrap { position: fixed; bottom: 48px; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center; pointer-events: auto; }
+#nameWrap { position: fixed; top: 35%; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center; pointer-events: auto; }
 #highScore { position: fixed; bottom: 68px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 13px; font-family: Georgia, serif; color: rgba(255,255,255,0.75); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; white-space: nowrap; }
 #hint { position: fixed; bottom: 105px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
 @keyframes bgfall {
@@ -40,7 +40,7 @@ img { -webkit-touch-callout: none; pointer-events: none; }
   border-radius: 3px; background: rgba(100, 130, 190, 0.55);
   animation: bgstreak linear infinite; }
 .bg-rain { position: fixed; pointer-events: none; z-index: 0; height: auto; animation: bgfall linear infinite; }
-#leaderboardPanel { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); z-index: 20; background: rgba(255,255,255,0.95); border-radius: 16px; padding: 20px 28px; min-width: 240px; font-family: Georgia, serif; display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+#leaderboardPanel { position: fixed; top: 35%; left: 50%; transform: translate(-50%,-50%); z-index: 20; background: rgba(255,255,255,0.95); border-radius: 16px; padding: 20px 28px; min-width: 240px; font-family: Georgia, serif; display: none; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
 #leaderboardPanel h2 { font-size: 18px; text-align: center; margin-bottom: 12px; color: #333; }
 #leaderboardList { list-style: none; padding: 0; margin: 0; }
 #leaderboardList li { padding: 5px 0; font-size: 14px; color: #333; display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid rgba(0,0,0,0.07); }
@@ -267,6 +267,7 @@ function endGame() {
   elHighScore.style.display = '';
   renderHighScore();
   document.getElementById('leaderboardBtn').style.display = '';
+  document.getElementById('nameWrap').style.display = '';
   document.getElementById('submitMsg').textContent = '';
   autoSubmitScore(gameScore);
 }
@@ -322,6 +323,7 @@ function startGame() {
   elScore.style.display    = 'block';
   elHint.style.display       = 'none';
   elHighScore.style.display  = 'none';
+  document.getElementById('nameWrap').style.display = 'none';
   document.getElementById('leaderboardBtn').style.display = 'none';
   elScoreNum.textContent   = '0';
   elGameOver.style.display = 'none';
@@ -515,13 +517,20 @@ function autoSubmitScore(score) {
   var alias = playerAlias.trim();
   if (!alias || score <= 0) return;
   var msg = document.getElementById('submitMsg');
+  msg.textContent = 'submitting…';
   fetch(SUPA_URL + '/rest/v1/leaderboard?on_conflict=alias', {
     method: 'POST',
-    headers: Object.assign(supaHeaders(true), { 'Prefer': 'resolution=merge-duplicates' }),
+    headers: Object.assign(supaHeaders(true), { 'Prefer': 'resolution=merge-duplicates,return=representation' }),
     body: JSON.stringify({ alias: alias, score: score })
   }).then(function(r) {
-    msg.textContent = r.ok ? 'score submitted as "' + alias + '"!' : '';
-  }).catch(function() {});
+    if (r.ok) {
+      msg.textContent = 'score submitted as "' + alias + '"!';
+      // Refresh leaderboard if already open
+      if (document.getElementById('leaderboardPanel').style.display === 'block') fetchLeaderboard();
+    } else {
+      r.text().then(function(t) { msg.textContent = 'error: ' + t.substring(0, 80); });
+    }
+  }).catch(function(e) { msg.textContent = 'network error — check connection'; });
 }
 
 function fetchLeaderboard() {
