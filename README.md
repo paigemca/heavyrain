@@ -1,6 +1,6 @@
 # heavy rain
 
-A hand-painted browser game. Stand in the rain and catch the coloured drops — but don't miss too many.
+A hand-painted browser game. Stand in the rain and catch the falling stars — but don't miss too many.
 
 **[Play here](https://paigemca.github.io/heavyrain/heavyrain.html)**
 
@@ -8,10 +8,10 @@ A hand-painted browser game. Stand in the rain and catch the coloured drops — 
 
 ## how to play
 
-Blue raindrops are decoration — ignore them. Catch the **pink** and **gold** drops before they hit the ground.
+Blue raindrops are decoration — ignore them. Watch for the **stars** and **hearts** falling from the cloud.
 
-- **Pink drops** — catch to score a point. Miss one and you lose a life.
-- **Gold drops** — rare. Catch one to restore a life. Missing costs nothing.
+- **Stars** — catch to score a point. Miss one and you lose a life.
+- **Hearts** — rare. Catch one to restore a life. Missing costs nothing.
 
 You start with 3 lives. The rain gets heavier and the sky darkens the longer you survive.
 
