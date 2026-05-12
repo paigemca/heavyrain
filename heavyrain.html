@@ -25,6 +25,8 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #playAgain { margin-top: 28px; font-family: Georgia, serif; font-size: 18px; background: rgba(255,255,255,0.82); border: none; padding: 8px 28px; border-radius: 20px; cursor: pointer; }
 #nameInput { font-family: Georgia, serif; font-size: 15px; text-align: center; border: none; border-bottom: 1px solid rgba(255,255,255,0.55); background: transparent; color: #fff; outline: none; width: 160px; padding: 4px 2px; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
 #nameInput::placeholder { color: rgba(255,255,255,0.55); }
+#startBtn { position: fixed; top: 42%; left: 50%; transform: translateX(-50%); z-index: 10; font-family: Georgia, serif; font-size: 18px; background: rgba(255,255,255,0.82); border: none; padding: 8px 32px; border-radius: 20px; cursor: pointer; letter-spacing: 0.5px; }
+#nameError { color: rgba(255,100,100,0.9); font-size: 12px; font-family: Georgia, serif; margin-top: 4px; min-height: 16px; text-shadow: 0 1px 3px rgba(0,0,0,0.4); }
 #nameWrap { position: fixed; top: 35%; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center; pointer-events: auto; }
 #highScore { position: fixed; bottom: 68px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 13px; font-family: Georgia, serif; color: rgba(255,255,255,0.75); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; white-space: nowrap; }
 #hint { position: fixed; bottom: 105px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
@@ -80,14 +82,15 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 <button id="pauseBtn">&#9646;&#9646;</button>
 <div id="lives"></div>
 <div id="flash"></div>
-<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><p id="submitMsg" style="font-family:Georgia,serif;font-size:13px;color:rgba(255,255,255,0.8);margin-top:10px;min-height:18px;"></p><button id="playAgain">play again</button></div>
+<div id="gameOver"><h1>game over</h1><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><p id="submitMsg" style="font-family:Georgia,serif;font-size:13px;color:rgba(255,255,255,0.8);margin-top:10px;min-height:18px;"></p><button id="playAgain">play again</button><button id="gameOverLeaderboardBtn" style="margin-top:6px;font-family:Georgia,serif;font-size:14px;background:transparent;border:none;color:rgba(255,255,255,0.75);cursor:pointer;text-decoration:underline;">&#127942; leaderboard</button></div>
 <div id="score"><img src="" id="scoreDropImg" style="width:22px;height:auto;opacity:0.85;vertical-align:middle;"><span id="scoreNum" style="vertical-align:middle;">0</span></div>
 </div>
 <div id="hint"></div>
 <div id="leaderboardPanel"><h2>leaderboard</h2><ul id="leaderboardList"></ul><button id="closeLeaderboard">close</button></div>
 <button id="leaderboardBtn">&#127942; leaderboard</button>
 <div id="highScore"></div>
-<div id="nameWrap"><input id="nameInput" placeholder="your name" maxlength="20" autocomplete="off" spellcheck="false"></div>
+<div id="nameWrap"><input id="nameInput" placeholder="your name" maxlength="20" autocomplete="off" spellcheck="false"><div id="nameError"></div></div>
+<button id="startBtn">play</button>
 
 
 
@@ -174,8 +177,8 @@ function loop(ts) {
 window.addEventListener('resize', function() { updateCharDimensions(); updateCloudRect(); });
 charEl.addEventListener('load', function() { updateCharDimensions(); updateCloudRect(); });
 elHint.innerHTML = ('ontouchstart' in window)
-  ? 'tap anywhere to start<br><small>tap left / right to move &nbsp;&bull;&nbsp; tap centre to jump</small>'
-  : 'click or press Enter to start<br><small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
+  ? '<small>tap left / right to move &nbsp;&bull;&nbsp; tap centre to jump</small>'
+  : '<small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 function renderHighScore() {
   var best = parseInt(localStorage.getItem('hrHighScore') || '0');
@@ -190,7 +193,7 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowLeft'  || e.key === 'a') { pressedLeft  = true;  e.preventDefault(); }
   if (e.key === 'ArrowRight' || e.key === 'd') { pressedRight = true;  e.preventDefault(); }
   if (e.key === 'ArrowUp'    || e.key === 'w' || e.key === ' ') { jump(); e.preventDefault(); }
-  if (e.key === 'Enter') { startGame(); }
+
 });
 document.addEventListener('keyup', function(e) {
   if (e.key === 'ArrowLeft'  || e.key === 'a') pressedLeft  = false;
@@ -200,11 +203,7 @@ document.addEventListener('keyup', function(e) {
 // Touch controls: left third | centre (jump) | right third
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'BUTTON') return;
-  if (!gameActive) {
-    if (elGameOver.style.display === 'flex') return;
-    startGame();
-    return;
-  }
+  if (!gameActive) return;
   var third = window.innerWidth / 3;
   if (e.clientX < third)          { pressedLeft = true;  pressedRight = false; }
   else if (e.clientX > third * 2) { pressedRight = true; pressedLeft  = false; }
@@ -324,6 +323,7 @@ function startGame() {
   elHint.style.display       = 'none';
   elHighScore.style.display  = 'none';
   document.getElementById('nameWrap').style.display = 'none';
+  document.getElementById('startBtn').style.display = 'none';
   document.getElementById('leaderboardBtn').style.display = 'none';
   elScoreNum.textContent   = '0';
   elGameOver.style.display = 'none';
@@ -560,6 +560,12 @@ nameInputEl.addEventListener('input', function() {
 nameInputEl.addEventListener('pointerdown', function(e) { e.stopPropagation(); });
 nameInputEl.addEventListener('keydown',     function(e) { e.stopPropagation(); });
 
+document.getElementById('gameOverLeaderboardBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  document.getElementById('leaderboardPanel').style.display = 'block';
+  fetchLeaderboard();
+});
+
 document.getElementById('leaderboardBtn').addEventListener('click', function(e) {
   e.stopPropagation();
   document.getElementById('leaderboardPanel').style.display = 'block';
@@ -569,6 +575,29 @@ document.getElementById('leaderboardBtn').addEventListener('click', function(e) 
 document.getElementById('closeLeaderboard').addEventListener('click', function(e) {
   e.stopPropagation();
   document.getElementById('leaderboardPanel').style.display = 'none';
+});
+
+function tryStartGame() {
+  var alias = playerAlias.trim();
+  var errEl = document.getElementById('nameError');
+  if (!alias) {
+    errEl.textContent = 'please enter your name first';
+    document.getElementById('nameInput').focus();
+    return;
+  }
+  errEl.textContent = '';
+  startGame();
+}
+
+document.getElementById('startBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  tryStartGame();
+});
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !gameActive && elGameOver.style.display !== 'flex') {
+    tryStartGame();
+  }
 });
 
 </script>
