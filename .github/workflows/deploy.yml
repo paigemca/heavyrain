@@ -23,7 +23,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Inject Supabase key
-        run: sed -i 's/__SUPA_KEY__/${{ secrets.SUPA_KEY }}/g' heavyrain.html
+        env:
+          SUPA_KEY: ${{ secrets.SUPA_KEY }}
+        run: sed -i "s|__SUPA_KEY__|${SUPA_KEY}|g" heavyrain.html
 
       - uses: actions/configure-pages@v5
 
