@@ -55,7 +55,8 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 body { background: #1e3a5f; }
 #gameUI { position: absolute; inset: 0; pointer-events: none; }
 #gameArea {
-  position: fixed; top: 0; left: 8px;
+  position: fixed; top: 0;
+  left: max(0px, calc((100vw - 430px) / 2));
   width: 430px; max-width: 100vw;
   height: 100vh; height: 100svh;
   overflow: hidden;
@@ -83,6 +84,7 @@ body { background: #1e3a5f; }
   #gameArea { left: 0; width: 100vw; height: 100svh; }
 }
 @media (min-width: 700px) {
+  #gameArea { left: 8px; }
   #leaderboardSidebar { display: flex; }
   #leaderboardBtn { display: none !important; }
 }
