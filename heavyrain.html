@@ -57,7 +57,7 @@ body { background: #1e3a5f; }
 #gameArea {
   position: fixed; top: 0; left: 8px;
   width: 430px; max-width: 100vw;
-  height: 100vh;
+  height: 100vh; height: 100svh;
   overflow: hidden;
 }
 /* ── Leaderboard sidebar on wide screens ── */
@@ -80,7 +80,7 @@ body { background: #1e3a5f; }
   display: flex; align-items: center; justify-content: center; gap: 6px;
 }
 @media (max-width: 699px) {
-  #gameArea { left: max(8px, calc((100vw - 430px) / 2)); }
+  #gameArea { left: 0; width: 100vw; height: 100svh; }
 }
 @media (min-width: 700px) {
   #leaderboardSidebar { display: flex; }
