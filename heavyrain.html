@@ -255,7 +255,7 @@ function loop(ts) {
 window.addEventListener('resize', function() { updateCharDimensions(); updateCloudRect(); });
 charEl.addEventListener('load', function() { updateCharDimensions(); updateCloudRect(); });
 elHint.innerHTML = ('ontouchstart' in window)
-  ? '<small>tap left / right to move &nbsp;&bull;&nbsp; tap centre to jump</small>'
+  ? '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center to jump</small>'
   : '<small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 function renderHighScore() {
