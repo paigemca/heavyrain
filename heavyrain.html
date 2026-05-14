@@ -444,6 +444,7 @@ function startGame() {
     li.src = heartSrc;
     elLives.appendChild(li);
   }
+  logMetric('game_started', null);
   updateRainColors();
   fadeOutTitle();
   animateCloudToTop();
@@ -611,6 +612,15 @@ function scheduleStormUpdate() {
 }
 
 
+
+function logMetric(event, score) {
+  var alias = playerAlias.trim() || null;
+  fetch(SUPA_URL + '/rest/v1/metrics', {
+    method: 'POST',
+    headers: supaHeaders(true),
+    body: JSON.stringify({ event: event, alias: alias, score: score || null })
+  }).catch(function() {});  // silent fail — never blocks gameplay
+}
 // ── Leaderboard (Supabase) ───────────────────────────────────
 var SUPA_URL  = 'https://xalsozgsdssqxzwikrdm.supabase.co';
 var SUPA_KEY  = '__SUPA_KEY__';
