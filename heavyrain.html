@@ -377,6 +377,7 @@ function endGame() {
   elScore.style.display    = 'none';
   elSubmitMsg.textContent = '';
   elGameOver.style.display  = 'flex';
+  document.getElementById('audioBtn').style.display = '';
   autoSubmitScore(gameScore, gameScore > prev);
 }
 
@@ -437,6 +438,7 @@ function startGame() {
   elScoreNum.textContent   = '0';
   elGameOver.style.display = 'none';
   elPauseBtn.style.display = 'flex';
+  document.getElementById('audioBtn').style.display = 'none';
   elLives.innerHTML = '';
   elLives.style.display = 'flex';
   for (var i = 0; i < MAX_LIVES; i++) {
