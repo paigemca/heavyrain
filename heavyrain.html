@@ -33,6 +33,12 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #nameWrap { position: absolute; top: 35%; left: 50%; transform: translateX(-50%); z-index: 10; text-align: center; pointer-events: auto; }
 #highScore { position: absolute; bottom: 48px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 13px; font-family: Georgia, serif; color: rgba(255,255,255,0.75); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; white-space: nowrap; }
 #hint { position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%); z-index: 10; font-size: 15px; font-family: Georgia, serif; color: rgba(255,255,255,0.9); text-shadow: 0 1px 4px rgba(0,0,0,0.5); pointer-events: none; text-align: center; line-height: 1.7; white-space: nowrap; }
+#touchZones { position: absolute; inset: 0; pointer-events: none; z-index: 4; display: none; }
+#touchZoneL, #touchZoneR { position: absolute; bottom: 0; height: 40%; width: 33.33%; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 22px; }
+#touchZoneL { left: 0; }
+#touchZoneR { right: 0; }
+#touchZoneL span, #touchZoneR span { font-size: 38px; color: rgba(255,255,255,0.15); transition: color 0.08s; }
+#touchZoneL.zone-active span, #touchZoneR.zone-active span { color: rgba(255,255,255,0.42); }
 @keyframes bgfall {
   from { transform: translateY(-8vh) rotate(6deg) scaleY(1.7); }
   to   { transform: translateY(93vh) rotate(6deg) scaleY(1.7); }
@@ -138,6 +144,7 @@ body { background: #1e3a5f; }
 
 </div>
 <div id="hint"></div>
+<div id="touchZones"><div id="touchZoneL"><span>&#8592;</span></div><div id="touchZoneR"><span>&#8594;</span></div></div>
 <div id="leaderboardPanel"><h2>leaderboard</h2><ul id="leaderboardList"></ul><button id="closeLeaderboard">close</button></div>
 <button id="leaderboardBtn">leaderboard</button>
 <div id="highScore"></div>
@@ -173,6 +180,9 @@ var elLives      = document.getElementById('lives');
 var elScore      = document.getElementById('score');
 var elScoreNum   = document.getElementById('scoreNum');
 var elHint       = document.getElementById('hint');
+var elTouchZones = document.getElementById('touchZones');
+var elTouchZoneL = document.getElementById('touchZoneL');
+var elTouchZoneR = document.getElementById('touchZoneR');
 var elFlash      = document.getElementById('flash');
 var elStorm      = document.getElementById('stormOverlay');
 var elFinalScore  = document.getElementById('finalScore');
@@ -289,18 +299,29 @@ document.addEventListener('keyup', function(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') pressedRight = false;
 });
 
-// Touch controls: left third | centre (jump) | right third
+// Touch controls: left third | centre (jump) | right third — multi-touch aware
+var leftPointerId = null, rightPointerId = null;
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'BUTTON') return;
   if (!gameActive) return;
   var relX = e.clientX - gaLeft();
   var third = gw() / 3;
-  if (relX < third)          { pressedLeft = true;  pressedRight = false; }
-  else if (relX > third * 2) { pressedRight = true; pressedLeft  = false; }
-  else                            { jump(); }
+  if (relX < third) {
+    pressedLeft = true; leftPointerId = e.pointerId;
+    elTouchZoneL.classList.add('zone-active');
+  } else if (relX > third * 2) {
+    pressedRight = true; rightPointerId = e.pointerId;
+    elTouchZoneR.classList.add('zone-active');
+  } else {
+    jump();
+  }
 });
-document.addEventListener('pointerup',     function() { pressedLeft = false; pressedRight = false; });
-document.addEventListener('pointercancel', function() { pressedLeft = false; pressedRight = false; });
+function releasePointer(pid) {
+  if (pid === leftPointerId)  { pressedLeft  = false; leftPointerId  = null; elTouchZoneL.classList.remove('zone-active'); }
+  if (pid === rightPointerId) { pressedRight = false; rightPointerId = null; elTouchZoneR.classList.remove('zone-active'); }
+}
+document.addEventListener('pointerup',     function(e) { releasePointer(e.pointerId); });
+document.addEventListener('pointercancel', function(e) { releasePointer(e.pointerId); });
 
 // ── Game state ───────────────────────────────────────────────
 var gameActive = false, gamePaused = false, gameScore = 0, lives = MAX_LIVES, gameStartTime = 0;
@@ -362,6 +383,9 @@ function missedDrop() {
 function endGame() {
   gameActive = false;
   gamePaused = false;
+  elTouchZones.style.display = 'none';
+  elTouchZoneL.classList.remove('zone-active');
+  elTouchZoneR.classList.remove('zone-active');
   elPauseBtn.style.display   = 'none';
   elPauseBtn.innerHTML       = '&#9646;&#9646;';
   elFinalScore.textContent   = 'you caught ' + gameScore + ' stars';
@@ -433,6 +457,8 @@ function startGame() {
   elHighScore.style.display  = 'none';
   elNameWrap.style.display = 'none';
   elStartBtn.style.display = 'none';
+  leftPointerId = null; rightPointerId = null;
+  if ('ontouchstart' in window) elTouchZones.style.display = 'block';
   elLeaderBtn.style.display = 'none';
   elScoreNum.textContent   = '0';
   elGameOver.style.display = 'none';
@@ -614,12 +640,11 @@ function scheduleStormUpdate() {
 
 
 function logMetric(event, score) {
-  var alias = playerAlias.trim() || null;
   fetch(SUPA_URL + '/rest/v1/metrics', {
     method: 'POST',
     headers: supaHeaders(true),
-    body: JSON.stringify({ event: event, alias: alias, score: score || null })
-  }).catch(function() {});  // silent fail — never blocks gameplay
+    body: JSON.stringify({ event: event, score: (score != null ? score : null) })
+  }).catch(function() {});
 }
 // ── Leaderboard (Supabase) ───────────────────────────────────
 var SUPA_URL  = 'https://xalsozgsdssqxzwikrdm.supabase.co';
