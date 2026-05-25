@@ -96,6 +96,14 @@ body { background: #1e3a5f; }
   #gameOverLeaderboardBtn { display: none !important; }
 }
 #creditImg { position: absolute; bottom: 14px; right: 16px; z-index: 10; height: 22px; width: auto; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)) brightness(0.75) saturate(1.3); }
+/* ── Mobile control buttons ── */
+#ctrlBtns { position: absolute; bottom: 70px; left: 0; right: 0; z-index: 8; display: none; justify-content: space-between; align-items: center; padding: 0 10px; pointer-events: none; }
+.ctrl-btn { pointer-events: auto; background: rgba(255,255,255,0.14); border: 1.5px solid rgba(255,255,255,0.28); border-radius: 18px; color: rgba(255,255,255,0.88); font-size: 26px; width: 23vw; max-width: 94px; min-width: 64px; height: 64px; display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; touch-action: none; }
+.ctrl-btn.pressed { background: rgba(255,255,255,0.32); }
+/* ── Control mode picker ── */
+#ctrlPicker { position: absolute; bottom: 175px; left: 50%; transform: translateX(-50%); z-index: 10; display: none; gap: 8px; pointer-events: auto; }
+.ctrl-opt { font-family: Georgia, serif; font-size: 13px; color: rgba(255,255,255,0.62); background: transparent; border: 1px solid rgba(255,255,255,0.22); border-radius: 20px; padding: 5px 14px; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.ctrl-opt.active { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
@@ -138,6 +146,15 @@ body { background: #1e3a5f; }
 
 </div>
 <div id="hint"></div>
+<div id="ctrlPicker">
+  <button class="ctrl-opt" data-mode="tilt">tilt</button>
+  <button class="ctrl-opt" data-mode="buttons">buttons</button>
+</div>
+<div id="ctrlBtns">
+  <button class="ctrl-btn" id="btnLeft">&#8592;</button>
+  <button class="ctrl-btn" id="btnJump">&#8593;</button>
+  <button class="ctrl-btn" id="btnRight">&#8594;</button>
+</div>
 <div id="leaderboardPanel"><h2>leaderboard</h2><ul id="leaderboardList"></ul><button id="closeLeaderboard">close</button></div>
 <button id="leaderboardBtn">leaderboard</button>
 <div id="highScore"></div>
@@ -264,9 +281,96 @@ function loop(ts) {
 
 window.addEventListener('resize', function() { updateCharDimensions(); updateCloudRect(); });
 charEl.addEventListener('load', function() { updateCharDimensions(); updateCloudRect(); });
-elHint.innerHTML = ('ontouchstart' in window)
-  ? '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center to jump</small>'
-  : '<small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
+// ── Control mode ─────────────────────────────────────────────
+var controlMode = localStorage.getItem('hrCtrl') || 'buttons';
+var tiltOrientHandler = null;
+var elCtrlBtns   = document.getElementById('ctrlBtns');
+var elCtrlPicker = document.getElementById('ctrlPicker');
+
+function updateHintText() {
+  if (!('ontouchstart' in window)) {
+    elHint.innerHTML = '<small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
+    return;
+  }
+  if (controlMode === 'tilt') {
+    elHint.innerHTML = '<small>tilt left / right to move &nbsp;&bull;&nbsp; tap to jump</small>';
+  } else if (controlMode === 'buttons') {
+    elHint.innerHTML = '<small>use the buttons below to move and jump</small>';
+  } else {
+    elHint.innerHTML = '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center to jump</small>';
+  }
+}
+
+function attachTilt() {
+  if (tiltOrientHandler) return;
+  tiltOrientHandler = function(e) {
+    if (!gameActive || gamePaused) return;
+    var gamma = e.gamma || 0;
+    var dead = 5;
+    pressedLeft  = gamma < -dead;
+    pressedRight = gamma > dead;
+  };
+  window.addEventListener('deviceorientation', tiltOrientHandler, { passive: true });
+}
+
+function detachTilt() {
+  if (tiltOrientHandler) {
+    window.removeEventListener('deviceorientation', tiltOrientHandler);
+    tiltOrientHandler = null;
+  }
+  pressedLeft = false; pressedRight = false;
+}
+
+function showToast(msg) {
+  var t = document.createElement('div');
+  t.textContent = msg;
+  t.style.cssText = 'position:absolute;bottom:200px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.72);color:#fff;font-family:Georgia,serif;font-size:13px;padding:8px 16px;border-radius:20px;z-index:50;white-space:nowrap;pointer-events:none;transition:opacity 0.4s;';
+  document.getElementById('gameArea').appendChild(t);
+  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 420); }, 2500);
+}
+
+function setControlMode(mode) {
+  controlMode = mode;
+  localStorage.setItem('hrCtrl', mode);
+  document.querySelectorAll('.ctrl-opt').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-mode') === mode);
+  });
+  updateHintText();
+  if (mode === 'tilt') {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      if (!window.isSecureContext) {
+        showToast('tilt needs HTTPS — see console for setup');
+        setControlMode('buttons');
+        console.warn('[heavyrain] Tilt requires HTTPS. Run: brew install cloudflared && cloudflared tunnel --url http://localhost:8080');
+        return;
+      }
+      DeviceOrientationEvent.requestPermission().then(function(s) {
+        if (s === 'granted') { attachTilt(); }
+        else { showToast('motion permission denied'); setControlMode('buttons'); }
+      }).catch(function() { showToast('could not enable tilt'); setControlMode('buttons'); });
+    } else if (typeof DeviceOrientationEvent !== 'undefined') {
+      attachTilt();
+    } else {
+      showToast('tilt not supported on this device'); setControlMode('buttons');
+    }
+  } else {
+    detachTilt();
+  }
+  if (gameActive) elCtrlBtns.style.display = (mode === 'buttons') ? 'flex' : 'none';
+}
+
+if ('ontouchstart' in window) {
+  elCtrlPicker.style.display = 'flex';
+  document.querySelectorAll('.ctrl-opt').forEach(function(btn) {
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      setControlMode(btn.getAttribute('data-mode'));
+    });
+  });
+  setControlMode(controlMode);
+} else {
+  updateHintText();
+}
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 elScore.style.display = 'none'; // hidden on start screen
 function renderHighScore() {
@@ -289,18 +393,53 @@ document.addEventListener('keyup', function(e) {
   if (e.key === 'ArrowRight' || e.key === 'd') pressedRight = false;
 });
 
-// Touch controls: left third | centre (jump) | right third
+// ── Touch / pointer controls (mode-aware, multi-touch fixed) ─
+var zonePointers = {};
+function zoneHasPointer(z) { for (var id in zonePointers) { if (zonePointers[id] === z) return true; } return false; }
+
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'BUTTON') return;
   if (!gameActive) return;
-  var relX = e.clientX - gaLeft();
-  var third = gw() / 3;
-  if (relX < third)          { pressedLeft = true;  pressedRight = false; }
-  else if (relX > third * 2) { pressedRight = true; pressedLeft  = false; }
-  else                            { jump(); }
+  if (controlMode === 'tilt') { jump(); return; }
+  if (controlMode === 'zones') {
+    var relX = e.clientX - gaLeft();
+    var third = gw() / 3;
+    if (relX < third)          { zonePointers[e.pointerId] = 'left';  pressedLeft = true; }
+    else if (relX > third * 2) { zonePointers[e.pointerId] = 'right'; pressedRight = true; }
+    else                       { zonePointers[e.pointerId] = 'jump';  jump(); }
+  }
+  // 'buttons' mode: handled entirely by ctrl-btn elements below
 });
-document.addEventListener('pointerup',     function() { pressedLeft = false; pressedRight = false; });
-document.addEventListener('pointercancel', function() { pressedLeft = false; pressedRight = false; });
+function onZonePointerEnd(e) {
+  if (e.target.tagName === 'BUTTON') return;
+  var z = zonePointers[e.pointerId];
+  delete zonePointers[e.pointerId];
+  if (controlMode === 'zones') {
+    if (z === 'left')  pressedLeft  = zoneHasPointer('left');
+    if (z === 'right') pressedRight = zoneHasPointer('right');
+  }
+}
+document.addEventListener('pointerup',     onZonePointerEnd);
+document.addEventListener('pointercancel', onZonePointerEnd);
+
+// ── On-screen button controls ─────────────────────────────────
+var elBtnLeft  = document.getElementById('btnLeft');
+var elBtnRight = document.getElementById('btnRight');
+var elBtnJump  = document.getElementById('btnJump');
+function setupCtrlBtn(btn, onDown, onUp) {
+  btn.addEventListener('pointerdown', function(e) {
+    e.preventDefault(); e.stopPropagation();
+    btn.setPointerCapture(e.pointerId);
+    btn.classList.add('pressed');
+    onDown();
+  });
+  ['pointerup', 'pointercancel'].forEach(function(ev) {
+    btn.addEventListener(ev, function(e) { e.stopPropagation(); btn.classList.remove('pressed'); onUp(); });
+  });
+}
+setupCtrlBtn(elBtnLeft,  function() { pressedLeft = true;  pressedRight = false; }, function() { pressedLeft  = false; });
+setupCtrlBtn(elBtnRight, function() { pressedRight = true; pressedLeft  = false; }, function() { pressedRight = false; });
+setupCtrlBtn(elBtnJump,  function() { jump(); },                                    function() {});
 
 // ── Game state ───────────────────────────────────────────────
 var gameActive = false, gamePaused = false, gameScore = 0, lives = MAX_LIVES, gameStartTime = 0;
@@ -378,6 +517,8 @@ function endGame() {
   elSubmitMsg.textContent = '';
   elGameOver.style.display  = 'flex';
   document.getElementById('audioBtn').style.display = '';
+  elCtrlBtns.style.display = 'none';
+  if ('ontouchstart' in window) elCtrlPicker.style.display = 'flex';
   autoSubmitScore(gameScore, gameScore > prev);
 }
 
@@ -439,6 +580,8 @@ function startGame() {
   elGameOver.style.display = 'none';
   elPauseBtn.style.display = 'flex';
   document.getElementById('audioBtn').style.display = 'none';
+  elCtrlPicker.style.display = 'none';
+  elCtrlBtns.style.display   = ('ontouchstart' in window && controlMode === 'buttons') ? 'flex' : 'none';
   elLives.innerHTML = '';
   elLives.style.display = 'flex';
   for (var i = 0; i < MAX_LIVES; i++) {
