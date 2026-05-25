@@ -272,6 +272,7 @@ charEl.addEventListener('load', function() { updateCharDimensions(); updateCloud
 var controlMode = 'tilt';
 var tiltListenerAttached = false;
 var tiltActive = false;
+var tiltDenied = false;
 var showPicker = false;
 
 var needsTiltPermission = 'ontouchstart' in window &&
@@ -363,7 +364,7 @@ function zoneHasPointer(z) { for (var id in zonePointers) { if (zonePointers[id]
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'BUTTON') return;
   if (!gameActive) return;
-  if (controlMode === 'tilt') { jump(); return; }
+  if (controlMode === 'tilt' && !tiltDenied) { jump(); return; }
   var relX = e.clientX - gaLeft();
   var third = gw() / 3;
   if (relX < third)          { zonePointers[e.pointerId] = 'left';  pressedLeft = true; }
@@ -796,11 +797,12 @@ function tryStartGame() {
   }
   errEl.textContent = '';
   if (needsTiltPermission && controlMode === 'tilt' && !tiltActive) {
+    tiltDenied = false;
     DeviceOrientationEvent.requestPermission().then(function(s) {
       if (s === 'granted') { attachTilt(); localStorage.setItem('hrTiltGranted', '1'); }
-      else                 { setControlMode('zones'); localStorage.removeItem('hrTiltGranted'); }
+      else                 { tiltDenied = true; localStorage.removeItem('hrTiltGranted'); }
       startGame();
-    }).catch(function() { setControlMode('zones'); localStorage.removeItem('hrTiltGranted'); startGame(); });
+    }).catch(function() { tiltDenied = true; localStorage.removeItem('hrTiltGranted'); startGame(); });
   } else {
     startGame();
   }
