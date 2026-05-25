@@ -745,7 +745,7 @@ function autoSubmitScore(score, isNewBest) {
   }).then(function(r) {
     if (r.ok) {
       if (isNewBest) msg.textContent = 'new high score saved for "' + alias + '"!';
-      if (elLeaderPanel.style.display === 'block') fetchLeaderboard();
+      fetchLeaderboard();
     } else {
       r.text().then(function(t) { msg.textContent = 'error: ' + t.substring(0, 80); });
     }
