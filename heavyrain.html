@@ -272,6 +272,10 @@ var needsTiltPermission = 'ontouchstart' in window &&
   typeof DeviceOrientationEvent.requestPermission === 'function' &&
   window.isSecureContext;
 
+var HINT_TILT  = '<small>tilt left / right to move &nbsp;&bull;&nbsp; tap to jump</small>';
+var HINT_ZONES = '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center to jump</small>';
+var HINT_KEYS  = '<small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
+
 function attachTilt() {
   if (tiltActive) return;
   tiltActive = true;
@@ -283,18 +287,21 @@ function attachTilt() {
   }, { passive: true });
 }
 
-if ('ontouchstart' in window) {
-  if (!needsTiltPermission && typeof DeviceOrientationEvent !== 'undefined') {
-    // Android / iOS 12-: attach immediately, no permission gesture needed
-    attachTilt();
-    elHint.innerHTML = '<small>tilt left / right to move &nbsp;&bull;&nbsp; tap to jump</small>';
-  } else {
-    // iOS 13+ HTTPS: permission requested on start button tap; show zones hint for now
-    elHint.innerHTML = '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center to jump</small>';
-    if (!window.isSecureContext) console.warn('[heavyrain] Tilt requires HTTPS. Run: brew install cloudflared && cloudflared tunnel --url http://localhost:8080');
-  }
+if (!('ontouchstart' in window)) {
+  elHint.innerHTML = HINT_KEYS;
+} else if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
+  // Android / iOS 12-: no permission needed, attach now
+  attachTilt();
+  elHint.innerHTML = HINT_TILT;
+} else if (needsTiltPermission) {
+  // iOS 13+ HTTPS: permission requested on start tap, show zones until then
+  elHint.innerHTML = HINT_ZONES;
 } else {
-  elHint.innerHTML = '<small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
+  // No tilt support or iOS over HTTP — zones fallback
+  elHint.innerHTML = HINT_ZONES;
+  if (typeof DeviceOrientationEvent !== 'undefined' && !window.isSecureContext) {
+    console.warn('[heavyrain] Tilt requires HTTPS. Run: brew install cloudflared && cloudflared tunnel --url http://localhost:8080');
+  }
 }
 document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
 elScore.style.display = 'none'; // hidden on start screen
@@ -759,9 +766,10 @@ function tryStartGame() {
   if (needsTiltPermission && !tiltActive) {
     // Request from within this user gesture so iOS shows the permission dialog
     DeviceOrientationEvent.requestPermission().then(function(s) {
-      if (s === 'granted') attachTilt();
+      if (s === 'granted') { attachTilt(); elHint.innerHTML = HINT_TILT; }
+      else                 { elHint.innerHTML = HINT_ZONES; }
       startGame();
-    }).catch(function() { startGame(); });
+    }).catch(function() { elHint.innerHTML = HINT_ZONES; startGame(); });
   } else {
     startGame();
   }
