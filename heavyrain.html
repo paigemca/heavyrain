@@ -266,14 +266,11 @@ window.addEventListener('resize', function() { updateCharDimensions(); updateClo
 charEl.addEventListener('load', function() { updateCharDimensions(); updateCloudRect(); });
 // ── Tilt controls (mobile) ────────────────────────────────────
 var tiltActive = false;
-
-function showToast(msg) {
-  var t = document.createElement('div');
-  t.textContent = msg;
-  t.style.cssText = 'position:absolute;bottom:200px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.72);color:#fff;font-family:Georgia,serif;font-size:13px;padding:8px 16px;border-radius:20px;z-index:50;white-space:nowrap;pointer-events:none;transition:opacity 0.4s;';
-  document.getElementById('gameArea').appendChild(t);
-  setTimeout(function() { t.style.opacity = '0'; setTimeout(function() { t.remove(); }, 420); }, 2500);
-}
+// true on iOS 13+ over HTTPS — requestPermission must be called from a user gesture
+var needsTiltPermission = 'ontouchstart' in window &&
+  typeof DeviceOrientationEvent !== 'undefined' &&
+  typeof DeviceOrientationEvent.requestPermission === 'function' &&
+  window.isSecureContext;
 
 function attachTilt() {
   if (tiltActive) return;
@@ -281,28 +278,20 @@ function attachTilt() {
   window.addEventListener('deviceorientation', function(e) {
     if (!gameActive || gamePaused) return;
     var gamma = e.gamma || 0;
-    var dead = 5;
-    pressedLeft  = gamma < -dead;
-    pressedRight = gamma > dead;
+    pressedLeft  = gamma < -5;
+    pressedRight = gamma >  5;
   }, { passive: true });
-  elHint.innerHTML = '<small>tilt left / right to move &nbsp;&bull;&nbsp; tap to jump</small>';
 }
 
 if ('ontouchstart' in window) {
-  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-    if (!window.isSecureContext) {
-      console.warn('[heavyrain] Tilt requires HTTPS. Run: brew install cloudflared && cloudflared tunnel --url http://localhost:8080');
-      elHint.innerHTML = '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center to jump</small>';
-    } else {
-      DeviceOrientationEvent.requestPermission().then(function(s) {
-        if (s === 'granted') attachTilt();
-        else elHint.innerHTML = '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center to jump</small>';
-      }).catch(function() {});
-    }
-  } else if (typeof DeviceOrientationEvent !== 'undefined') {
+  if (!needsTiltPermission && typeof DeviceOrientationEvent !== 'undefined') {
+    // Android / iOS 12-: attach immediately, no permission gesture needed
     attachTilt();
+    elHint.innerHTML = '<small>tilt left / right to move &nbsp;&bull;&nbsp; tap to jump</small>';
   } else {
+    // iOS 13+ HTTPS: permission requested on start button tap; show zones hint for now
     elHint.innerHTML = '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center to jump</small>';
+    if (!window.isSecureContext) console.warn('[heavyrain] Tilt requires HTTPS. Run: brew install cloudflared && cloudflared tunnel --url http://localhost:8080');
   }
 } else {
   elHint.innerHTML = '<small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
@@ -767,7 +756,15 @@ function tryStartGame() {
     return;
   }
   errEl.textContent = '';
-  startGame();
+  if (needsTiltPermission && !tiltActive) {
+    // Request from within this user gesture so iOS shows the permission dialog
+    DeviceOrientationEvent.requestPermission().then(function(s) {
+      if (s === 'granted') attachTilt();
+      startGame();
+    }).catch(function() { startGame(); });
+  } else {
+    startGame();
+  }
 }
 
 elStartBtn.addEventListener('click', function(e) {
