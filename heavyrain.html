@@ -99,6 +99,12 @@ body { background: #1e3a5f; }
 #ctrlPicker { position: absolute; bottom: 162px; left: 50%; transform: translateX(-50%); z-index: 10; display: none; gap: 8px; pointer-events: auto; }
 .ctrl-opt { font-family: Georgia, serif; font-size: 13px; color: rgba(255,255,255,0.62); background: transparent; border: 1px solid rgba(255,255,255,0.22); border-radius: 20px; padding: 5px 14px; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; transition: background 0.15s, color 0.15s, border-color 0.15s; }
 .ctrl-opt.active { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.5); }
+#tiltDeniedModal { position: absolute; inset: 0; z-index: 30; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; pointer-events: auto; }
+#tiltDeniedCard { background: rgba(15,40,90,0.96); border-radius: 16px; padding: 24px 24px 20px; max-width: 270px; width: 85%; text-align: center; font-family: Georgia, serif; color: #fff; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+#tiltDeniedCard h3 { margin: 0 0 8px; font-size: 17px; font-weight: normal; }
+#tiltDeniedCard p { font-size: 13px; color: rgba(255,255,255,0.7); margin: 0 0 16px; line-height: 1.5; }
+#tiltDeniedZonesBtn { font-family: Georgia, serif; font-size: 14px; color: #fff; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.4); border-radius: 20px; padding: 9px 0; cursor: pointer; display: block; width: 100%; margin-bottom: 14px; -webkit-tap-highlight-color: transparent; }
+#tiltDeniedHint { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.6; margin: 0; }
 </style>
 </head>
 <body>
@@ -142,6 +148,7 @@ body { background: #1e3a5f; }
 </div>
 <div id="hint"></div>
 <div id="ctrlPicker"><button class="ctrl-opt" data-mode="tilt">tilt</button><button class="ctrl-opt" data-mode="zones">zones</button></div>
+<div id="tiltDeniedModal"><div id="tiltDeniedCard"><h3>tilt access denied</h3><p>your device is blocking motion access for this site.</p><button id="tiltDeniedZonesBtn">play with zones instead</button><p id="tiltDeniedHint">to enable tilt:<br>Settings &rarr; Safari &rarr; Advanced<br>&rarr; Website Data &rarr; search for "github"<br>&rarr; clear data, then reload.</p></div></div>
 <div id="leaderboardPanel"><h2>leaderboard</h2><ul id="leaderboardList"></ul><button id="closeLeaderboard">close</button></div>
 <button id="leaderboardBtn">leaderboard</button>
 <div id="highScore"></div>
@@ -288,6 +295,13 @@ var HINT_ZONES = '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center 
 var HINT_KEYS  = '<small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
 
 var elCtrlPicker = document.getElementById('ctrlPicker');
+var elTiltDeniedModal = document.getElementById('tiltDeniedModal');
+
+document.getElementById('tiltDeniedZonesBtn').addEventListener('click', function(e) {
+  e.stopPropagation();
+  elTiltDeniedModal.style.display = 'none';
+  setControlMode('zones');
+});
 
 function attachTilt() {
   if (tiltListenerAttached) return;
@@ -808,11 +822,11 @@ function tryStartGame() {
         startGame();
       } else {
         localStorage.removeItem('hrTiltGranted');
-        elHint.innerHTML = '<small>tilt access denied &nbsp;&bull;&nbsp; switch to zones to play</small>';
+        elTiltDeniedModal.style.display = 'flex';
       }
     }).catch(function() {
       localStorage.removeItem('hrTiltGranted');
-      elHint.innerHTML = '<small>tilt access denied &nbsp;&bull;&nbsp; switch to zones to play</small>';
+      elTiltDeniedModal.style.display = 'flex';
     });
   } else {
     startGame();
