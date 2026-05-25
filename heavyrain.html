@@ -375,6 +375,7 @@ var zonePointers = {};
 function zoneHasPointer(z) { for (var id in zonePointers) { if (zonePointers[id] === z) return true; } return false; }
 
 document.addEventListener('pointerdown', function(e) {
+  if (e.target !== nameInputEl && document.activeElement === nameInputEl) nameInputEl.blur();
   if (e.target.tagName === 'BUTTON') return;
   if (!gameActive) return;
   if (controlMode === 'tilt') { jump(); return; }
