@@ -96,6 +96,9 @@ body { background: #1e3a5f; }
   #gameOverLeaderboardBtn { display: none !important; }
 }
 #creditImg { position: absolute; bottom: 14px; right: 16px; z-index: 10; height: 22px; width: auto; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.4)) brightness(0.75) saturate(1.3); }
+#ctrlPicker { position: absolute; bottom: 162px; left: 50%; transform: translateX(-50%); z-index: 10; display: none; gap: 8px; pointer-events: auto; }
+.ctrl-opt { font-family: Georgia, serif; font-size: 13px; color: rgba(255,255,255,0.62); background: transparent; border: 1px solid rgba(255,255,255,0.22); border-radius: 20px; padding: 5px 14px; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.ctrl-opt.active { background: rgba(255,255,255,0.2); color: rgba(255,255,255,0.95); border-color: rgba(255,255,255,0.5); }
 </style>
 </head>
 <body>
@@ -138,6 +141,7 @@ body { background: #1e3a5f; }
 
 </div>
 <div id="hint"></div>
+<div id="ctrlPicker"><button class="ctrl-opt" data-mode="tilt">tilt</button><button class="ctrl-opt" data-mode="zones">zones</button></div>
 <div id="leaderboardPanel"><h2>leaderboard</h2><ul id="leaderboardList"></ul><button id="closeLeaderboard">close</button></div>
 <button id="leaderboardBtn">leaderboard</button>
 <div id="highScore"></div>
@@ -265,39 +269,66 @@ function loop(ts) {
 window.addEventListener('resize', function() { updateCharDimensions(); updateCloudRect(); });
 charEl.addEventListener('load', function() { updateCharDimensions(); updateCloudRect(); });
 // ── Tilt controls (mobile) ────────────────────────────────────
+var controlMode = 'tilt';
+var tiltListenerAttached = false;
 var tiltActive = false;
-// true on iOS 13+ over HTTPS — requestPermission must be called from a user gesture
+var showPicker = false;
+
 var needsTiltPermission = 'ontouchstart' in window &&
   typeof DeviceOrientationEvent !== 'undefined' &&
   typeof DeviceOrientationEvent.requestPermission === 'function' &&
   window.isSecureContext;
 
+var tiltAvailable = 'ontouchstart' in window &&
+  typeof DeviceOrientationEvent !== 'undefined' &&
+  (typeof DeviceOrientationEvent.requestPermission !== 'function' || window.isSecureContext);
+
 var HINT_TILT  = '<small>tilt left / right to move &nbsp;&bull;&nbsp; tap to jump</small>';
 var HINT_ZONES = '<small>tap left / right to move &nbsp;&bull;&nbsp; tap center to jump</small>';
 var HINT_KEYS  = '<small>&#8592; &#8594; arrow keys to move &nbsp;&bull;&nbsp; &#8593; or Space to jump</small>';
 
+var elCtrlPicker = document.getElementById('ctrlPicker');
+
 function attachTilt() {
-  if (tiltActive) return;
+  if (tiltListenerAttached) return;
+  tiltListenerAttached = true;
   tiltActive = true;
   window.addEventListener('deviceorientation', function(e) {
-    if (!gameActive || gamePaused) return;
+    if (!gameActive || gamePaused || controlMode !== 'tilt') return;
     var gamma = e.gamma || 0;
     pressedLeft  = gamma < -5;
     pressedRight = gamma >  5;
   }, { passive: true });
 }
 
+function setControlMode(mode) {
+  controlMode = mode;
+  localStorage.setItem('hrCtrl', mode);
+  var btns = elCtrlPicker.querySelectorAll('.ctrl-opt');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].classList.toggle('active', btns[i].getAttribute('data-mode') === mode);
+  }
+  elHint.innerHTML = mode === 'tilt' ? HINT_TILT : HINT_ZONES;
+  if (mode === 'tilt' && !needsTiltPermission && typeof DeviceOrientationEvent !== 'undefined') {
+    attachTilt();
+  }
+  if (mode === 'zones') { pressedLeft = false; pressedRight = false; }
+}
+
+var pickerBtns = elCtrlPicker.querySelectorAll('.ctrl-opt');
+for (var i = 0; i < pickerBtns.length; i++) {
+  pickerBtns[i].addEventListener('click', (function(btn) {
+    return function(e) { e.stopPropagation(); setControlMode(btn.getAttribute('data-mode')); };
+  })(pickerBtns[i]));
+}
+
 if (!('ontouchstart' in window)) {
   elHint.innerHTML = HINT_KEYS;
-} else if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission !== 'function') {
-  // Android / iOS 12-: no permission needed, attach now
-  attachTilt();
-  elHint.innerHTML = HINT_TILT;
-} else if (needsTiltPermission) {
-  // iOS 13+ HTTPS: permission requested on start tap, show zones until then
-  elHint.innerHTML = HINT_ZONES;
+} else if (tiltAvailable) {
+  showPicker = true;
+  elCtrlPicker.style.display = 'flex';
+  setControlMode(localStorage.getItem('hrCtrl') || 'tilt');
 } else {
-  // No tilt support or iOS over HTTP — zones fallback
   elHint.innerHTML = HINT_ZONES;
   if (typeof DeviceOrientationEvent !== 'undefined' && !window.isSecureContext) {
     console.warn('[heavyrain] Tilt requires HTTPS. Run: brew install cloudflared && cloudflared tunnel --url http://localhost:8080');
@@ -332,7 +363,7 @@ function zoneHasPointer(z) { for (var id in zonePointers) { if (zonePointers[id]
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'BUTTON') return;
   if (!gameActive) return;
-  if (tiltActive) { jump(); return; }
+  if (controlMode === 'tilt') { jump(); return; }
   var relX = e.clientX - gaLeft();
   var third = gw() / 3;
   if (relX < third)          { zonePointers[e.pointerId] = 'left';  pressedLeft = true; }
@@ -478,6 +509,7 @@ function startGame() {
   elScoreDropImg.src = starSrcs[0];
   elScore.style.display    = 'flex';
   elHint.style.display       = 'none';
+  if (showPicker) elCtrlPicker.style.display = 'none';
   elHighScore.style.display  = 'none';
   elNameWrap.style.display = 'none';
   elStartBtn.style.display = 'none';
@@ -763,13 +795,12 @@ function tryStartGame() {
     return;
   }
   errEl.textContent = '';
-  if (needsTiltPermission && !tiltActive) {
-    // Request from within this user gesture so iOS shows the permission dialog
+  if (needsTiltPermission && controlMode === 'tilt' && !tiltActive) {
     DeviceOrientationEvent.requestPermission().then(function(s) {
-      if (s === 'granted') { attachTilt(); elHint.innerHTML = HINT_TILT; }
-      else                 { elHint.innerHTML = HINT_ZONES; }
+      if (s === 'granted') { attachTilt(); localStorage.setItem('hrTiltGranted', '1'); }
+      else                 { setControlMode('zones'); localStorage.removeItem('hrTiltGranted'); }
       startGame();
-    }).catch(function() { elHint.innerHTML = HINT_ZONES; startGame(); });
+    }).catch(function() { setControlMode('zones'); localStorage.removeItem('hrTiltGranted'); startGame(); });
   } else {
     startGame();
   }
