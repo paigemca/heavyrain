@@ -152,7 +152,7 @@ body { background: #1e3a5f; }
 <div id="leaderboardPanel"><h2>leaderboard</h2><ul id="leaderboardList"></ul><button id="closeLeaderboard">close</button></div>
 <button id="leaderboardBtn">leaderboard</button>
 <div id="highScore"></div>
-<div id="nameWrap"><input id="nameInput" placeholder="your name" maxlength="20" autocomplete="off" spellcheck="false"><div id="nameError"></div></div>
+<div id="nameWrap"><input id="nameInput" name="alias" placeholder="enter alias" maxlength="20" autocomplete="off" spellcheck="false"><div id="nameError"></div></div>
 <button id="startBtn"></button>
 
 
@@ -809,7 +809,7 @@ function tryStartGame() {
   var alias = playerAlias.trim();
   var errEl = elNameError;
   if (!alias) {
-    errEl.textContent = 'please enter your name first';
+    errEl.textContent = 'please enter an alias first';
     elNameInput.focus();
     return;
   }
