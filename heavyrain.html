@@ -695,12 +695,18 @@ function scheduleStormUpdate() {
 
 
 
+function getEffectiveControls() {
+  if (!('ontouchstart' in window)) return 'keyboard';
+  if (controlMode === 'tilt' && !tiltDenied) return 'tilt';
+  return 'zones';
+}
+
 function logMetric(event, score) {
   var alias = playerAlias.trim() || null;
   fetch(SUPA_URL + '/rest/v1/metrics', {
     method: 'POST',
     headers: supaHeaders(true),
-    body: JSON.stringify({ event: event, alias: alias, score: score || null })
+    body: JSON.stringify({ event: event, alias: alias, score: score || null, controls: getEffectiveControls() })
   }).catch(function() {});  // silent fail — never blocks gameplay
 }
 // ── Leaderboard (Supabase) ───────────────────────────────────
