@@ -272,7 +272,6 @@ charEl.addEventListener('load', function() { updateCharDimensions(); updateCloud
 var controlMode = 'tilt';
 var tiltListenerAttached = false;
 var tiltActive = false;
-var tiltDenied = false;
 var showPicker = false;
 
 var needsTiltPermission = 'ontouchstart' in window &&
@@ -364,7 +363,7 @@ function zoneHasPointer(z) { for (var id in zonePointers) { if (zonePointers[id]
 document.addEventListener('pointerdown', function(e) {
   if (e.target.tagName === 'BUTTON') return;
   if (!gameActive) return;
-  if (controlMode === 'tilt' && !tiltDenied) { jump(); return; }
+  if (controlMode === 'tilt') { jump(); return; }
   var relX = e.clientX - gaLeft();
   var third = gw() / 3;
   if (relX < third)          { zonePointers[e.pointerId] = 'left';  pressedLeft = true; }
@@ -697,8 +696,7 @@ function scheduleStormUpdate() {
 
 function getEffectiveControls() {
   if (!('ontouchstart' in window)) return 'keyboard';
-  if (controlMode === 'tilt' && !tiltDenied) return 'tilt';
-  return 'zones';
+  return controlMode;
 }
 
 function logMetric(event, score) {
@@ -803,12 +801,19 @@ function tryStartGame() {
   }
   errEl.textContent = '';
   if (needsTiltPermission && controlMode === 'tilt' && !tiltActive) {
-    tiltDenied = false;
     DeviceOrientationEvent.requestPermission().then(function(s) {
-      if (s === 'granted') { attachTilt(); localStorage.setItem('hrTiltGranted', '1'); }
-      else                 { tiltDenied = true; localStorage.removeItem('hrTiltGranted'); }
-      startGame();
-    }).catch(function() { tiltDenied = true; localStorage.removeItem('hrTiltGranted'); startGame(); });
+      if (s === 'granted') {
+        attachTilt();
+        localStorage.setItem('hrTiltGranted', '1');
+        startGame();
+      } else {
+        localStorage.removeItem('hrTiltGranted');
+        elHint.innerHTML = '<small>tilt access denied &nbsp;&bull;&nbsp; switch to zones to play</small>';
+      }
+    }).catch(function() {
+      localStorage.removeItem('hrTiltGranted');
+      elHint.innerHTML = '<small>tilt access denied &nbsp;&bull;&nbsp; switch to zones to play</small>';
+    });
   } else {
     startGame();
   }
