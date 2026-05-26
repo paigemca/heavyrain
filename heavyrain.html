@@ -53,11 +53,12 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #leaderboardList::-webkit-scrollbar-track { background: transparent; }
 #leaderboardList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.35); border-radius: 3px; }
 #sidebarList { list-style: none; padding: 0; margin: 0; width: fit-content; }
-#leaderboardList li { padding: 5px 6px; font-size: 14px; font-family: Georgia, serif; color: rgba(255,255,255,0.92); display: flex; justify-content: center; align-items: center; gap: 14px; border-bottom: 1px solid rgba(255,255,255,0.2); }
+#leaderboardList li { padding: 5px 6px; font-size: 14px; font-family: Georgia, serif; color: rgba(255,255,255,0.92); display: flex; justify-content: flex-start; align-items: center; gap: 14px; border-bottom: 1px solid rgba(255,255,255,0.2); }
 #sidebarList li { padding: 5px 6px; font-size: 14px; font-family: Georgia, serif; color: rgba(255,255,255,0.92); display: flex; justify-content: flex-start; align-items: center; gap: 14px; border-bottom: 1px solid rgba(255,255,255,0.2); }
 #leaderboardList li:last-child, #sidebarList li:last-child { border-bottom: none; }
 #leaderboardList .rank, #sidebarList .rank { color: rgba(255,255,255,0.5); width: 18px; text-align: right; flex-shrink: 0; }
 #leaderboardList li span:last-child, #sidebarList li span:last-child { width: 32px; text-align: right; flex-shrink: 0; }
+#leaderboardList li span:nth-child(2), #sidebarList li span:nth-child(2) { flex: 1; min-width: 0; }
 #closeLeaderboard { display: block; margin: 14px auto 0; font-family: Georgia, serif; font-size: 14px; background: transparent; border: none; color: rgba(255,255,255,0.65); cursor: pointer; pointer-events: auto; }
 #leaderboardBtn { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 10; background: none; border: none; padding: 4px; cursor: pointer; pointer-events: auto; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.55)); white-space: nowrap; }
 
