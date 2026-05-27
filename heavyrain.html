@@ -476,6 +476,7 @@ function endGame() {
   elSubmitMsg.textContent = '';
   elGameOver.style.display  = 'flex';
   document.getElementById('audioBtn').style.display = '';
+  logMetric('game_over', gameScore);
   autoSubmitScore(gameScore, gameScore > prev);
 }
 
