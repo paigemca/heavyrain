@@ -5,7 +5,6 @@ var gameAreaEl   = document.getElementById('gameArea');
 function gw() { return gameAreaEl.offsetWidth; }
 function gh() { return gameAreaEl.offsetHeight; }
 function gaLeft() { return gameAreaEl.getBoundingClientRect().left; }
-function gaTop()  { return gameAreaEl.getBoundingClientRect().top;  }
 var elPauseBtn   = document.getElementById('pauseBtn');
 var elGameOver   = document.getElementById('gameOver');
 var elLives      = document.getElementById('lives');
@@ -29,6 +28,11 @@ var elCloudImg    = document.getElementById('cloud');
 var elCloudCont   = document.getElementById('cloudContainer');
 var elCtrlPicker  = document.getElementById('ctrlPicker');
 var elTiltDeniedModal = document.getElementById('tiltDeniedModal');
+var elTitle       = document.getElementById('title');
+var elPlayAgain   = document.getElementById('playAgain');
+var elAudioBtn    = document.getElementById('audioBtn');
+var elAudioPanel  = document.getElementById('audioPanel');
+var elSidebarList = document.getElementById('sidebarList');
 
 // ── Sprite images (hidden <img>s in heavyrain.html) ──────────
 var dropSrcs   = [0,1,2,3,4].map(function(i) { return document.getElementById('drop'+i).src; });
@@ -44,7 +48,6 @@ var groundY   = GROUND_HOME;
 var charW     = 100, charH = 200;  // cached dimensions
 var activeDrops = [], bgRainEls = [], coloredRainEls = [];
 var cloudRect  = null;  // cached cloud bounding rect
-var rainDurs   = new WeakMap();  // maps rain elements to base duration
 var splatTimes = new WeakMap();  // rate-limits splat events per element
 
 // ── Game state ───────────────────────────────────────────────

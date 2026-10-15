@@ -36,7 +36,6 @@ function endGame() {
   gameActive = false;
   gamePaused = false;
   elPauseBtn.style.display   = 'none';
-  elPauseBtn.innerHTML       = '&#9646;&#9646;';
   elFinalScore.textContent   = 'you caught ' + gameScore + ' stars';
   var prev = parseInt(localStorage.getItem('hrHighScore') || '0');
   var best = Math.max(prev, gameScore);
@@ -50,37 +49,19 @@ function endGame() {
   elScore.style.display    = 'none';
   elSubmitMsg.textContent = '';
   elGameOver.style.display  = 'flex';
-  document.getElementById('audioBtn').style.display = '';
+  elAudioBtn.style.display  = '';
   logMetric('game_over', gameScore);
   autoSubmitScore(gameScore, gameScore > prev);
 }
 
-document.getElementById('playAgain').addEventListener('click', function(e) {
+elPlayAgain.addEventListener('click', function(e) {
   e.stopPropagation();
-  elGameOver.style.display = 'none';
-  elScore.style.display    = 'none';
-  elLives.style.display    = 'none';
-  gameActive  = false;
-  gamePaused  = false;
-  groundY     = GROUND_HOME;
-  gameScore   = 0;
-  charVelX    = 0;
-  velY = 0; offsetY = 0; isOnGround = true; jumpsLeft = 2;
-  elScoreNum.textContent     = '0';
-  elStorm.style.opacity      = '0';
-  elPauseBtn.innerHTML       = '&#9646;&#9646;';
-  elPauseBtn.style.display   = 'none';
-  activeDrops.forEach(function(d) { d.el.remove(); });
-  activeDrops = [];
-  bgRainEls.forEach(function(el) { el.style.animationPlayState = 'running'; });
-  elHighScore.style.display = '';
   startGame();
 });
 
 function fadeOutTitle() {
-  var t = document.getElementById('title');
-  t.style.opacity = '0';
-  setTimeout(function() { t.style.display = 'none'; }, 420);
+  elTitle.style.opacity = '0';
+  setTimeout(function() { elTitle.style.display = 'none'; }, 420);
 }
 
 function animateCloudToTop() {
@@ -95,13 +76,27 @@ function animateCloudToTop() {
   setTimeout(updateCloudRect, 750);  // refresh after CSS transition
 }
 
+// Clears everything left over from a previous game (character motion, drops, storm, pause)
+function resetGame() {
+  gamePaused = false;
+  gameScore  = 0;
+  lives      = MAX_LIVES;
+  charVelX   = 0;
+  velY = 0; offsetY = 0; isOnGround = true; jumpsLeft = 2;
+  activeDrops.forEach(function(d) { d.el.remove(); });
+  activeDrops = [];
+  elScoreNum.textContent = '0';
+  elStorm.style.opacity  = '0';
+  elPauseBtn.innerHTML   = '&#9646;&#9646;';
+  bgRainEls.forEach(function(el) { el.style.animationPlayState = 'running'; });
+}
+
 function startGame() {
   if (gameActive) return;
+  resetGame();
   gameActive    = true;
   gameStartTime = Date.now();
   groundY       = GROUND_GAME;
-  lives         = MAX_LIVES;
-  gameScore     = 0;
   elScore.style.display    = 'flex';
   elHint.style.display       = 'none';
   if (showPicker) elCtrlPicker.style.display = 'none';
@@ -109,10 +104,9 @@ function startGame() {
   elNameWrap.style.display = 'none';
   elStartBtn.style.display = 'none';
   elLeaderBtn.style.display = 'none';
-  elScoreNum.textContent   = '0';
   elGameOver.style.display = 'none';
   elPauseBtn.style.display = 'flex';
-  document.getElementById('audioBtn').style.display = 'none';
+  elAudioBtn.style.display = 'none';
   elLives.innerHTML = '';
   elLives.style.display = 'flex';
   for (var i = 0; i < MAX_LIVES; i++) {
@@ -143,14 +137,11 @@ function tryStartGame() {
     DeviceOrientationEvent.requestPermission().then(function(s) {
       if (s === 'granted') {
         attachTilt();
-        localStorage.setItem('hrTiltGranted', '1');
         startGame();
       } else {
-        localStorage.removeItem('hrTiltGranted');
         elTiltDeniedModal.style.display = 'flex';
       }
     }).catch(function() {
-      localStorage.removeItem('hrTiltGranted');
       elTiltDeniedModal.style.display = 'flex';
     });
   } else {
@@ -163,12 +154,6 @@ elStartBtn.addEventListener('click', function(e) {
   tryStartGame();
 });
 
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Enter' && !gameActive && elGameOver.style.display !== 'flex') {
-    tryStartGame();
-  }
-});
-
 // ── Falling stars / hearts ───────────────────────────────────
 function scheduleDrop() {
   if (!gameActive) return;
@@ -178,10 +163,12 @@ function scheduleDrop() {
   setTimeout(function() { spawnDrop(); scheduleDrop(); }, base + Math.random() * base * 0.3);
 }
 
-var COLLECT_TYPES = [
-  { type: 'gold', src: 'heart', filter: '' },
-  { type: 'star', src: 'star', filter: 'brightness(1.15) saturate(1.1)' }
-];
+// Stars score a point (and cost a life if missed); hearts give an extra life
+// Each drop gets the CSS classes "falling <type>"
+var COLLECT_TYPES = {
+  heart: { scale: 1.5 },
+  star:  { scale: 1.6 }
+};
 
 function spawnDrop() {
   if (!cloudRect) updateCloudRect();
@@ -191,18 +178,15 @@ function spawnDrop() {
   var spd  = (3.2 - sf * 1.8) + Math.min(gameScore * 0.03, 2.5) + Math.random() * 0.5;
   var x    = cr.left + cr.width * 0.15 + Math.random() * cr.width * 0.70;
   var y    = cr.bottom - 10;
-  var type  = Math.random() < GOLD_CHANCE ? COLLECT_TYPES[0] : COLLECT_TYPES[1];
-  var srcs  = type.src === 'star' ? starSrcs : (type.src === 'heart' ? null : dropSrcs);
-  if (type.src === 'star')  size = Math.round(size * 1.6);
-  if (type.src === 'heart') size = Math.round(size * 1.5);
+  var type = Math.random() < HEART_CHANCE ? 'heart' : 'star';
+  size = Math.round(size * COLLECT_TYPES[type].scale);
   var el    = document.createElement('img');
-  el.src    = type.src === 'heart' ? heartSrc : srcs[Math.floor(Math.random() * srcs.length)];
-  el.style.cssText = 'position:absolute;left:0;top:0;width:' + size + 'px;height:auto;'
-    + 'pointer-events:none;z-index:5;opacity:0.9;will-change:transform;'
-    + (type.filter ? 'filter:' + type.filter + ';' : '')
-    + 'transform:translate(' + (x - size / 2) + 'px,' + y + 'px);';
+  el.src    = type === 'heart' ? heartSrc : starSrcs[Math.floor(Math.random() * starSrcs.length)];
+  el.className       = 'falling ' + type;
+  el.style.width     = size + 'px';
+  el.style.transform = 'translate(' + (x - size / 2) + 'px,' + y + 'px)';
   gameAreaEl.appendChild(el);
-  activeDrops.push({ el: el, x: x, y: y, spd: spd, size: size, type: type.type });
+  activeDrops.push({ el: el, x: x, y: y, spd: spd, size: size, type: type });
 }
 
 function updateDrops() {
@@ -223,7 +207,7 @@ function updateDrops() {
 
     var dl = d.x - d.size * 0.5, dr = d.x + d.size * 0.5, db = d.y + d.size;
     if (dr > cl && dl < cr2 && db > ct && d.y < cb) {
-      if (d.type === 'gold') {
+      if (d.type === 'heart') {
         lives++;
         var li = document.createElement('img');
         li.src = heartSrc;

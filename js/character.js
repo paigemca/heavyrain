@@ -10,8 +10,8 @@ function updateCharDimensions() {
 
 function refreshTitleSize() {
   var scale = Math.min(gw() / 430, 1);
-  var h = document.querySelector('#title img[alt="heavy"]');
-  var r = document.querySelector('#title img[alt="rain"]');
+  var h = elTitle.querySelector('.title-heavy');
+  var r = elTitle.querySelector('.title-rain');
   if (h) h.style.height = Math.round(66 * scale) + 'px';
   if (r) r.style.height = Math.round(55 * scale) + 'px';
 }

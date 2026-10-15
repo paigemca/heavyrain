@@ -1,8 +1,7 @@
 // ── Audio panel (narrow screens; wide screens show the sidebar player) ─
-document.getElementById('audioBtn').addEventListener('click', function(e) {
+elAudioBtn.addEventListener('click', function(e) {
   e.stopPropagation();
-  var panel = document.getElementById('audioPanel');
-  panel.style.display = panel.style.display === 'block' ? 'none' : 'block';
+  elAudioPanel.style.display = elAudioPanel.style.display === 'block' ? 'none' : 'block';
 });
 
 // ── Startup ──────────────────────────────────────────────────

@@ -6,20 +6,19 @@ function setupCssRain() {
     var dur     = 1.6 + Math.random() * 4.8;
     var colored  = i < 10;
     var isStar   = colored && i >= 5;  // slots 5-9 are stars
-    var isGold   = colored && i < 5;   // slots 0-4 are gold drops
+    var isHeart  = colored && i < 5;   // slots 0-4 are hearts
     var filter   = isStar ? 'brightness(1.15) saturate(1.1)' : '';
-    var starSize = isStar ? Math.round(size * 1.6) : isGold ? Math.round(size * 1.5) : size;
+    var starSize = isStar ? Math.round(size * 1.6) : isHeart ? Math.round(size * 1.5) : size;
 
     el.src = isStar ? starSrcs[Math.floor(Math.random() * starSrcs.length)]
-           : isGold ? heartSrc
+           : isHeart ? heartSrc
            : dropSrcs[Math.floor(Math.random() * dropSrcs.length)];
-    el.className           = 'bg-rain' + (colored ? ' bg-rain-colored' : '');
+    el.className           = 'bg-rain';
     el.style.width         = starSize + 'px';
     el.style.left          = (Math.random() * 103 - 1).toFixed(1) + '%';
     el.style.opacity       = (0.18 + Math.random() * 0.52).toFixed(2);
     el.style.animationDuration = dur.toFixed(2) + 's';
     el.style.animationDelay    = (-Math.random() * 7).toFixed(2) + 's';
-    rainDurs.set(el, dur);
     if (filter) el.style.filter = filter;
     if (colored) coloredRainEls.push(el);
 
@@ -56,7 +55,6 @@ function setupCssRain() {
     s.style.left               = (Math.random() * 102 - 1).toFixed(1) + '%';
     s.style.animationDuration  = sDur.toFixed(2) + 's';
     s.style.animationDelay     = (-Math.random() * 3).toFixed(2) + 's';
-    rainDurs.set(s, sDur);
     gameAreaEl.appendChild(s);
     bgRainEls.push(s);
   }
@@ -68,7 +66,7 @@ var bgSplatCanvas, bgSplatCtx;
 function resizeSplatCanvas() { bgSplatCanvas.width = gw(); bgSplatCanvas.height = gh(); }
 function setupSplatCanvas() {
   bgSplatCanvas = document.createElement('canvas');
-  bgSplatCanvas.style.cssText = 'position:absolute;inset:0;pointer-events:none;z-index:0;';
+  bgSplatCanvas.id = 'splatCanvas';
   gameAreaEl.appendChild(bgSplatCanvas);
   bgSplatCtx = bgSplatCanvas.getContext('2d');
   resizeSplatCanvas();

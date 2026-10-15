@@ -10,40 +10,49 @@
 
 <div id="bgLayer"><img src="assets/bg.jpg"></div>
 
-<div id="stormOverlay" style="position:absolute;inset:0;background:#1a1a2e;opacity:0;pointer-events:none;z-index:1;transition:opacity 3s;"></div>
+<div id="stormOverlay"></div>
 <div id="cloudContainer">
 <img id="cloud" src="assets/cloud.png" alt="">
 
 <div id="title">
-  <img src="assets/title-heavy.png" style="height:66px;width:auto;" alt="heavy">
-  <img src="assets/title-rain.png"  style="height:55px;width:auto;" alt="rain">
+  <img class="title-heavy" src="assets/title-heavy.png" alt="heavy">
+  <img class="title-rain" src="assets/title-rain.png" alt="rain">
 </div>
 </div>
 
 <img id="character" src="assets/character.png" alt="">
 
 <!-- Hidden sprite sources, read by js/state.js -->
-<img id="heart" src="assets/heart.png" style="display:none" alt="">
-<img id="star0" src="assets/star0.png" style="display:none" alt="">
-<img id="star1" src="assets/star1.png" style="display:none" alt="">
-<img id="star2" src="assets/star2.png" style="display:none" alt="">
-<img id="star3" src="assets/star3.png" style="display:none" alt="">
-<img id="drop0" src="assets/drop0.png" style="display:none">
-<img id="drop1" src="assets/drop1.png" style="display:none">
-<img id="drop2" src="assets/drop2.png" style="display:none">
-<img id="drop3" src="assets/drop3.png" style="display:none">
-<img id="drop4" src="assets/drop4.png" style="display:none">
+<div id="sprites" hidden>
+<img id="heart" src="assets/heart.png" alt="">
+<img id="star0" src="assets/star0.png" alt="">
+<img id="star1" src="assets/star1.png" alt="">
+<img id="star2" src="assets/star2.png" alt="">
+<img id="star3" src="assets/star3.png" alt="">
+<img id="drop0" src="assets/drop0.png" alt="">
+<img id="drop1" src="assets/drop1.png" alt="">
+<img id="drop2" src="assets/drop2.png" alt="">
+<img id="drop3" src="assets/drop3.png" alt="">
+<img id="drop4" src="assets/drop4.png" alt="">
+</div>
 
 <img id="creditImg" src="assets/credit.png" alt="created by paige">
 <button id="pauseBtn">&#9646;&#9646;</button>
 <button id="audioBtn">&#9835;</button>
 <div id="audioPanel"><iframe src="https://open.spotify.com/embed/playlist/5vpxurqeli1mWZIaCUtOPR?utm_source=generator&theme=0" width="300" height="200" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div>
-<div id="score"><img src="assets/star0.png" id="scoreDropImg" style="width:22px;height:auto;opacity:0.85;vertical-align:middle;"><span id="scoreNum" style="vertical-align:middle;">0</span></div>
+<div id="score"><img id="scoreDropImg" src="assets/star0.png" alt=""><span id="scoreNum">0</span></div>
 <div id="gameUI">
 <div id="lives"></div>
 <div id="flash"></div>
-<div id="gameOver"><h1><img src="assets/text-game-over.png" style="height:140px;width:auto;filter:drop-shadow(0 1px 4px rgba(0,0,0,0.35));" alt="game over"></h1><div id="gameOverDetails" style="text-align:center;margin-bottom:0;"><p id="finalScore"></p><p id="bestScore" style="font-size:16px;opacity:0.8;margin-top:4px;"></p><p id="submitMsg" style="min-height:16px;"></p><button id="playAgain"><img class="star star-play" src="assets/star1.png" alt=""> <img class="text-img text-play" src="assets/text-play.png" alt="play"><img class="text-img text-again" src="assets/text-again.png" alt="again"> <img class="star star-play" src="assets/star1.png" alt=""></button><button id="gameOverLeaderboardBtn" style="position:absolute;bottom:80px;left:50%;transform:translateX(-50%);white-space:nowrap;font-family:Georgia,serif;font-size:14px;background:transparent;border:none;color:rgba(255,255,255,0.75);cursor:pointer;text-decoration:underline;"><img class="star star-btn" src="assets/star0.png" alt=""> <img class="text-img text-leaderboard-btn" src="assets/text-leaderboard.png" alt="leaderboard"> <img class="star star-btn" src="assets/star0.png" alt=""></button></div>
-
+<div id="gameOver">
+  <h1><img src="assets/text-game-over.png" alt="game over"></h1>
+  <div id="gameOverDetails">
+    <p id="finalScore"></p>
+    <p id="bestScore"></p>
+    <p id="submitMsg"></p>
+    <button id="playAgain"><img class="star star-play" src="assets/star1.png" alt=""> <img class="text-img text-play" src="assets/text-play.png" alt="play"><img class="text-img text-again" src="assets/text-again.png" alt="again"> <img class="star star-play" src="assets/star1.png" alt=""></button>
+    <button id="gameOverLeaderboardBtn"><img class="star star-btn" src="assets/star0.png" alt=""> <img class="text-img text-leaderboard-btn" src="assets/text-leaderboard.png" alt="leaderboard"> <img class="star star-btn" src="assets/star0.png" alt=""></button>
+  </div>
 </div>
 <div id="hint"></div>
 <div id="ctrlPicker"><button class="ctrl-opt" data-mode="tilt">tilt</button><button class="ctrl-opt" data-mode="zones">tap</button></div>
@@ -53,12 +62,16 @@
 <div id="highScore"></div>
 <div id="nameWrap"><div id="nameInput" contenteditable="true" spellcheck="false" data-placeholder="enter alias"></div><div id="nameError"></div></div>
 <button id="startBtn"><img class="star star-play" src="assets/star1.png" alt=""> <img class="text-img text-play" src="assets/text-play.png" alt="play"> <img class="star star-play" src="assets/star1.png" alt=""></button>
-
-
-
 </div>
 </div>
-<div id="leaderboardSidebar"><div id="soundtrackTitle" style="text-align:left;"><img class="star star-sm" src="assets/star3.png" alt=""> <img class="text-img text-sound" src="assets/text-rec.png" alt="rec"> <img class="text-img text-sound" src="assets/text-sound.png" alt="sound"> <img class="star star-sm" src="assets/star3.png" alt=""></div><div style="margin-top:8px;"><iframe style="border-radius:12px;" src="https://open.spotify.com/embed/playlist/5vpxurqeli1mWZIaCUtOPR?utm_source=generator" width="100%" height="200" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div><h2 id="sidebarTitle" style="margin-top:20px;"><img class="star star-title" src="assets/star2.png" alt=""> <img class="text-img text-leaderboard-title" src="assets/text-leaderboard.png" alt="leaderboard"> <img class="star star-title" src="assets/star2.png" alt=""></h2><ul id="sidebarList"></ul></div>
+
+<!-- Wide screens (≥700px) only -->
+<div id="leaderboardSidebar">
+  <div id="soundtrackTitle"><img class="star star-sm" src="assets/star3.png" alt=""> <img class="text-img text-sound" src="assets/text-rec.png" alt="rec"> <img class="text-img text-sound" src="assets/text-sound.png" alt="sound"> <img class="star star-sm" src="assets/star3.png" alt=""></div>
+  <div id="sidebarPlayer"><iframe src="https://open.spotify.com/embed/playlist/5vpxurqeli1mWZIaCUtOPR?utm_source=generator" width="100%" height="200" frameborder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe></div>
+  <h2 id="sidebarTitle"><img class="star star-title" src="assets/star2.png" alt=""> <img class="text-img text-leaderboard-title" src="assets/text-leaderboard.png" alt="leaderboard"> <img class="star star-title" src="assets/star2.png" alt=""></h2>
+  <ul id="sidebarList"></ul>
+</div>
 
 <!-- Load order matters: these share globals, and main.js runs startup last -->
 <script src="js/config.js"></script>

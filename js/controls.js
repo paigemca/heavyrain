@@ -4,12 +4,14 @@ var tiltListenerAttached = false;
 var tiltActive = false;
 var showPicker = false;
 
-var needsTiltPermission = 'ontouchstart' in window &&
+var IS_TOUCH = 'ontouchstart' in window;
+
+var needsTiltPermission = IS_TOUCH &&
   typeof DeviceOrientationEvent !== 'undefined' &&
   typeof DeviceOrientationEvent.requestPermission === 'function' &&
   window.isSecureContext;
 
-var tiltAvailable = 'ontouchstart' in window &&
+var tiltAvailable = IS_TOUCH &&
   typeof DeviceOrientationEvent !== 'undefined' &&
   (typeof DeviceOrientationEvent.requestPermission !== 'function' || window.isSecureContext);
 
@@ -51,7 +53,7 @@ function setControlMode(mode) {
 
 // Pick the default control scheme for this device and show the matching hint
 function initControls() {
-  if (!('ontouchstart' in window)) {
+  if (!IS_TOUCH) {
     elHint.innerHTML = HINT_KEYS;
   } else if (tiltAvailable) {
     showPicker = true;
@@ -66,7 +68,7 @@ function initControls() {
 }
 
 function getEffectiveControls() {
-  if (!('ontouchstart' in window)) return 'keyboard';
+  if (!IS_TOUCH) return 'keyboard';
   return controlMode;
 }
 
@@ -84,7 +86,7 @@ document.addEventListener('keydown', function(e) {
   if (e.key === 'ArrowLeft'  || e.key === 'a') { pressedLeft  = true;  e.preventDefault(); }
   if (e.key === 'ArrowRight' || e.key === 'd') { pressedRight = true;  e.preventDefault(); }
   if (e.key === 'ArrowUp'    || e.key === 'w' || e.key === ' ') { jump(); e.preventDefault(); }
-
+  if (e.key === 'Enter' && !gameActive && elGameOver.style.display !== 'flex') tryStartGame();
 });
 document.addEventListener('keyup', function(e) {
   if (e.key === 'ArrowLeft'  || e.key === 'a') pressedLeft  = false;

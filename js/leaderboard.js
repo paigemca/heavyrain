@@ -39,7 +39,7 @@ function renderLeaderboardRows(listEl, rows) {
   listEl.textContent = '';
   rows.forEach(function(row, i) {
     var li = document.createElement('li');
-    if (row.alias === playerAlias) li.style.fontWeight = 'bold';
+    if (row.alias === playerAlias) li.className = 'me';
     [i + 1, row.alias, row.score].forEach(function(val, col) {
       var span = document.createElement('span');
       if (col === 0) span.className = 'rank';
@@ -50,22 +50,26 @@ function renderLeaderboardRows(listEl, rows) {
   });
 }
 
+function leaderboardMessage(text) {
+  return '<li class="lb-msg">' + text + '</li>';
+}
+
 function fetchLeaderboard() {
   var list = elLeaderList;
-  var sidebar = document.getElementById('sidebarList');
-  list.innerHTML = sidebar.innerHTML = '<li style="color:#aaa;border:none;">loading…</li>';
+  var sidebar = elSidebarList;
+  list.innerHTML = sidebar.innerHTML = leaderboardMessage('loading…');
   fetch(SUPA_URL + '/rest/v1/leaderboard?select=alias,score&order=score.desc&limit=100', {
     headers: supaHeaders(false)
   }).then(function(r) { return r.json(); })
     .then(function(rows) {
       if (!rows || !rows.length) {
-        list.innerHTML = sidebar.innerHTML = '<li style="color:#aaa;border:none;">no scores yet — be first!</li>';
+        list.innerHTML = sidebar.innerHTML = leaderboardMessage('no scores yet — be first!');
         return;
       }
       renderLeaderboardRows(list, rows);
-      if (sidebar) renderLeaderboardRows(sidebar, rows);
+      renderLeaderboardRows(sidebar, rows);
     }).catch(function() {
-      list.innerHTML = '<li style="color:#aaa;border:none;">could not load</li>';
+      list.innerHTML = leaderboardMessage('could not load');
     });
 }
 
@@ -91,8 +95,7 @@ elNameInput.addEventListener('pointerdown', function(e) { e.stopPropagation(); }
 document.getElementById('gameOverLeaderboardBtn').addEventListener('click', function(e) {
   e.stopPropagation();
   elLeaderPanel.style.display = 'block';
-  document.getElementById('playAgain').disabled = true;
-  document.getElementById('playAgain').style.opacity = '0.4';
+  elPlayAgain.disabled = true;
   fetchLeaderboard();
 });
 
@@ -100,7 +103,6 @@ elLeaderBtn.addEventListener('click', function(e) {
   e.stopPropagation();
   elLeaderPanel.style.display = 'block';
   elStartBtn.disabled = true;
-  elStartBtn.style.opacity = '0.4';
   fetchLeaderboard();
 });
 
@@ -108,7 +110,5 @@ document.getElementById('closeLeaderboard').addEventListener('click', function(e
   e.stopPropagation();
   elLeaderPanel.style.display = 'none';
   elStartBtn.disabled = false;
-  elStartBtn.style.opacity = '1';
-  document.getElementById('playAgain').disabled = false;
-  document.getElementById('playAgain').style.opacity = '1';
+  elPlayAgain.disabled = false;
 });
