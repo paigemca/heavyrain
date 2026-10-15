@@ -2,8 +2,13 @@
 var charEl       = document.getElementById('character');
 var gameAreaEl   = document.getElementById('gameArea');
 
-function gw() { return gameAreaEl.offsetWidth; }
-function gh() { return gameAreaEl.offsetHeight; }
+// #gameArea size, re-measured on resize rather than every frame
+var gameW = 0, gameH = 0;
+function measureGameArea() { gameW = gameAreaEl.offsetWidth; gameH = gameAreaEl.offsetHeight; }
+measureGameArea();
+window.addEventListener('resize', measureGameArea);  // registered first, so other resize handlers see the new size
+function gw() { return gameW; }
+function gh() { return gameH; }
 function gaLeft() { return gameAreaEl.getBoundingClientRect().left; }
 var elPauseBtn   = document.getElementById('pauseBtn');
 var elGameOver   = document.getElementById('gameOver');
@@ -51,4 +56,6 @@ var cloudRect  = null;  // cached cloud bounding rect
 var splatTimes = new WeakMap();  // rate-limits splat events per element
 
 // ── Game state ───────────────────────────────────────────────
-var gameActive = false, gamePaused = false, gameScore = 0, lives = MAX_LIVES, gameStartTime = 0;
+var gameActive = false, gamePaused = false, gameScore = 0, lives = MAX_LIVES;
+var gameTime   = 0;                  // ms of unpaused play this game; drives difficulty, spawning, storm
+var nextDropAt = 0, nextStormAt = 0; // gameTime of the next drop spawn / storm update

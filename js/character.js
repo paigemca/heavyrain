@@ -36,27 +36,31 @@ function updateChar() {
   charEl.style.transform = 'translate(' + cx + 'px,' + cy + 'px)' + (facingRight ? '' : ' scaleX(-1)');
 }
 
-// Frame-rate cap so game speed is consistent on 120Hz ProMotion displays
+// Frame-rate cap so 120Hz ProMotion displays run at 60fps.
+// dt = frames elapsed at 60fps (≈1 normally, ≈2 on a device stuck at 30fps); all motion is scaled by it.
 var lastFrameTime = 0;
 function loop(ts) {
   if (ts - lastFrameTime < FRAME_MS * 0.9) { requestAnimationFrame(loop); return; }
+  var dt = Math.min((ts - lastFrameTime) / FRAME_MS, MAX_DT);
   lastFrameTime = ts;
 
   if (!gamePaused) {
-    if (pressedLeft)       charVelX = Math.max(charVelX - CHAR_ACCEL, -CHAR_MAX);
-    else if (pressedRight) charVelX = Math.min(charVelX + CHAR_ACCEL,  CHAR_MAX);
-    else                   charVelX *= CHAR_FRIC;
-    if (Math.abs(charVelX) > 0.01) charX += charVelX;
+    if (pressedLeft)       charVelX = Math.max(charVelX - CHAR_ACCEL * dt, -CHAR_MAX);
+    else if (pressedRight) charVelX = Math.min(charVelX + CHAR_ACCEL * dt,  CHAR_MAX);
+    else                   charVelX *= Math.pow(CHAR_FRIC, dt);
+    if (Math.abs(charVelX) > 0.01) charX += charVelX * dt;
     if (charVelX < -0.01) facingRight = false;
     if (charVelX >  0.01) facingRight = true;
   }
   charX = Math.max(5, Math.min(95, charX));
   if (!gamePaused && !isOnGround) {
-    velY += GRAVITY; offsetY -= velY;
+    // Same result as running dt separate 60fps steps of (velY += GRAVITY; offsetY -= velY)
+    offsetY -= (velY + GRAVITY * (dt + 1) / 2) * dt;
+    velY    += GRAVITY * dt;
     if (offsetY <= 0) { offsetY = 0; velY = 0; isOnGround = true; jumpsLeft = 2; }
   }
   updateChar();
-  if (gameActive && !gamePaused) updateDrops();
+  if (gameActive && !gamePaused) updateGame(dt);
   requestAnimationFrame(loop);
 }
 

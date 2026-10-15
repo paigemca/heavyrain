@@ -78,12 +78,8 @@ function updateRainColors() {
   coloredRainEls.forEach(function(el) { el.style.display = hide ? 'none' : ''; });
 }
 
-// ── Storm intensity (recursive setTimeout — self-correcting) ─
-function scheduleStormUpdate() {
-  setTimeout(function() {
-    if (!gameActive) return;
-    var t = Math.min((Date.now() - gameStartTime) / 1000 / 180, 1);
-    elStorm.style.opacity = (t * 0.28).toFixed(3);
-    scheduleStormUpdate();
-  }, 4000);
+// ── Storm intensity: darkens over the first 3 minutes of play ─
+function updateStorm() {
+  var t = Math.min(gameTime / 1000 / 180, 1);
+  elStorm.style.opacity = (t * 0.28).toFixed(3);
 }

@@ -80,6 +80,7 @@ function animateCloudToTop() {
 function resetGame() {
   gamePaused = false;
   gameScore  = 0;
+  gameTime   = 0;
   lives      = MAX_LIVES;
   charVelX   = 0;
   velY = 0; offsetY = 0; isOnGround = true; jumpsLeft = 2;
@@ -95,7 +96,6 @@ function startGame() {
   if (gameActive) return;
   resetGame();
   gameActive    = true;
-  gameStartTime = Date.now();
   groundY       = GROUND_GAME;
   elScore.style.display    = 'flex';
   elHint.style.display       = 'none';
@@ -119,8 +119,16 @@ function startGame() {
   fadeOutTitle();
   animateCloudToTop();
   spawnDrop();
-  scheduleDrop();
-  scheduleStormUpdate();
+  nextDropAt  = dropDelay();
+  nextStormAt = STORM_UPDATE_MS;
+}
+
+// Called by the main loop every frame while a game is running and not paused
+function updateGame(dt) {
+  gameTime += dt * FRAME_MS;
+  if (gameTime >= nextDropAt)  { spawnDrop(); nextDropAt = gameTime + dropDelay(); }
+  if (gameTime >= nextStormAt) { updateStorm(); nextStormAt += STORM_UPDATE_MS; }
+  updateDrops(dt);
 }
 
 // Checks the alias, asks for iOS motion permission if needed, then starts
@@ -155,12 +163,10 @@ elStartBtn.addEventListener('click', function(e) {
 });
 
 // ── Falling stars / hearts ───────────────────────────────────
-function scheduleDrop() {
-  if (!gameActive) return;
-  if (gamePaused) { setTimeout(scheduleDrop, 200); return; }
-  var elapsed = (Date.now() - gameStartTime) / 1000;
-  var base    = Math.max(250, 1200 - elapsed * 14);
-  setTimeout(function() { spawnDrop(); scheduleDrop(); }, base + Math.random() * base * 0.3);
+// ms until the next drop: starts ~1.2s apart, speeds up to 250ms over ~68s of play
+function dropDelay() {
+  var base = Math.max(250, 1200 - gameTime / 1000 * 14);
+  return base + Math.random() * base * 0.3;
 }
 
 // Stars score a point (and cost a life if missed); hearts give an extra life
@@ -189,14 +195,14 @@ function spawnDrop() {
   activeDrops.push({ el: el, x: x, y: y, spd: spd, size: size, type: type });
 }
 
-function updateDrops() {
+function updateDrops(dt) {
   var wh  = gh(), ww = gw();
   var cx  = (charX / 100) * ww;
   var cb  = getGroundYPct(charX) * wh - offsetY;
   var cl  = cx - charW * CATCH_X, cr2 = cx + charW * CATCH_X, ct = cb - charH * CATCH_Y;
 
   activeDrops = activeDrops.filter(function(d) {
-    d.y += d.spd;
+    d.y += d.spd * dt;
     d.el.style.transform = 'translate(' + (d.x - d.size * 0.5) + 'px,' + d.y + 'px)';
 
     if (d.y + d.size * 0.5 >= getGroundYPct((d.x / ww) * 100) * wh) {
