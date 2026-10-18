@@ -10,6 +10,13 @@ elPauseBtn.addEventListener('click', function(e) {
   this.innerHTML = gamePaused ? '&#9654;' : '&#9646;&#9646;';
   var ps = gamePaused ? 'paused' : 'running';
   bgRainEls.forEach(function(el) { el.style.animationPlayState = ps; });
+  // Show the leaderboard while paused (wide screens already have it in the sidebar)
+  if (gamePaused) {
+    fetchLeaderboard();
+    if (window.matchMedia('(max-width: 699px)').matches) elLeaderPanel.style.display = 'block';
+  } else {
+    elLeaderPanel.style.display = 'none';
+  }
 });
 
 var flashTimer = 0;

@@ -100,7 +100,7 @@ function zoneHasPointer(z) { for (var id in zonePointers) { if (zonePointers[id]
 document.addEventListener('pointerdown', function(e) {
   if (e.target !== elNameInput && document.activeElement === elNameInput) elNameInput.blur();
   if (e.target.tagName === 'BUTTON') return;
-  if (!gameActive) return;
+  if (!gameActive || gamePaused) return;
   if (controlMode === 'tilt') { jump(); return; }
   var relX = e.clientX - gaLeft();
   var third = gw() / 3;
