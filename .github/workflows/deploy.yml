@@ -27,6 +27,10 @@ jobs:
           SUPA_KEY: ${{ secrets.SUPA_KEY }}
         run: sed -i "s|__SUPA_KEY__|${SUPA_KEY}|g" js/config.js
 
+      # Version the CSS/JS URLs so browsers never pair new HTML with cached old files
+      - name: Cache-bust CSS and JS
+        run: sed -i -E "s#(href=\"css/[^\"]+\.css|src=\"js/[^\"]+\.js)\"#\1?v=${GITHUB_SHA::7}\"#g" heavyrain.html
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
