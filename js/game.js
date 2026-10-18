@@ -13,9 +13,15 @@ elPauseBtn.addEventListener('click', function(e) {
   // Show the leaderboard while paused (wide screens already have it in the sidebar)
   if (gamePaused) {
     fetchLeaderboard();
-    if (window.matchMedia('(max-width: 699px)').matches) elLeaderPanel.style.display = 'block';
+    if (window.matchMedia('(max-width: 699px)').matches) {
+      elLeaderPanel.classList.add('paused');
+      elLeaderClose.textContent = 'resume';
+      elLeaderPanel.style.display = 'block';
+    }
   } else {
     elLeaderPanel.style.display = 'none';
+    elLeaderPanel.classList.remove('paused');
+    elLeaderClose.textContent = 'close';
   }
 });
 

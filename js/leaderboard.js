@@ -106,8 +106,9 @@ elLeaderBtn.addEventListener('click', function(e) {
   fetchLeaderboard();
 });
 
-document.getElementById('closeLeaderboard').addEventListener('click', function(e) {
+elLeaderClose.addEventListener('click', function(e) {
   e.stopPropagation();
+  if (gamePaused) { elPauseBtn.click(); return; }  // "resume" on the pause screen
   elLeaderPanel.style.display = 'none';
   elStartBtn.disabled = false;
   elPlayAgain.disabled = false;

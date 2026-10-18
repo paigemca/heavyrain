@@ -71,6 +71,9 @@ img { -webkit-touch-callout: none; pointer-events: none; }
 #leaderboardList li span:last-child, #sidebarList li span:last-child { width: 32px; text-align: right; flex-shrink: 0; }
 #leaderboardList li span:nth-child(2), #sidebarList li span:nth-child(2) { flex: 1; min-width: 0; }
 #closeLeaderboard { display: block; margin: 14px auto 0; font-family: Georgia, serif; font-size: 14px; background: transparent; border: none; color: rgba(255,255,255,0.65); cursor: pointer; pointer-events: auto; }
+#leaderboardPanel.paused { top: 50%; }
+#pausedMsg { display: none; margin: 0 0 10px; text-align: center; font-size: 16px; letter-spacing: 1px; color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.3); }
+#leaderboardPanel.paused #pausedMsg { display: block; }
 #leaderboardBtn { position: absolute; bottom: 80px; left: 50%; transform: translateX(-50%); z-index: 10; background: none; border: none; padding: 4px; cursor: pointer; pointer-events: auto; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.55)); white-space: nowrap; }
 
 /* ── Game area constraint ── */

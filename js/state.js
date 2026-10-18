@@ -29,6 +29,7 @@ var elHighScore   = document.getElementById('highScore');
 var elLeaderPanel = document.getElementById('leaderboardPanel');
 var elLeaderList  = document.getElementById('leaderboardList');
 var elLeaderBtn   = document.getElementById('leaderboardBtn');
+var elLeaderClose = document.getElementById('closeLeaderboard');
 var elCloudImg    = document.getElementById('cloud');
 var elCloudCont   = document.getElementById('cloudContainer');
 var elCtrlPicker  = document.getElementById('ctrlPicker');
